@@ -92,6 +92,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
 
+# Add overrides to align with Flutter 3.13 pinned packages
+dependency_overrides:
+  meta: 1.9.1
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
