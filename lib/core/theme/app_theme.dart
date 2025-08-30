@@ -126,10 +126,10 @@ class AppTheme {
     
     cardTheme: CardThemeData(
       elevation: 2,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
     
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
