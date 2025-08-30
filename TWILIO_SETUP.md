@@ -28,7 +28,26 @@ This guide will help you set up Twilio SMS integration for the RentME Koraput ap
 3. Purchase the number (free trial accounts get one free number)
 4. Note down the phone number in E.164 format (e.g., +1234567890)
 
-## Step 4: Configure Environment Variables
+## Step 4: Verify Phone Numbers (Trial Accounts Only)
+
+**IMPORTANT**: If you're using a Twilio trial account, you must verify any phone numbers you want to send SMS to before testing.
+
+### How to Verify Phone Numbers:
+
+1. Go to your Twilio Console: https://console.twilio.com/
+2. Navigate to **Phone Numbers** > **Manage** > **Verified Caller IDs**
+3. Click **Add a new number**
+4. Enter the phone number you want to test with (including country code)
+5. Choose **SMS** as the verification method
+6. Enter the verification code you receive
+7. The number will now be verified and can receive SMS from your trial account
+
+### Trial Account Error (Error 21608):
+If you see an error like "The number +91XXXXXXXXX is unverified. Trial accounts cannot send messages to unverified numbers", you need to:
+- Verify the phone number as described above, OR
+- Upgrade to a paid Twilio account to send SMS to any number
+
+## Step 5: Configure Environment Variables
 
 ### Option A: Using --dart-define (Recommended)
 
@@ -54,7 +73,7 @@ flutter run --dart-define=TWILIO_ACCOUNT_SID=your_account_sid_here --dart-define
 
 3. Add `.env` to your `.gitignore` file to avoid committing secrets
 
-## Step 5: Test SMS Functionality
+## Step 6: Test SMS Functionality
 
 1. Run the app:
    ```bash
@@ -70,20 +89,25 @@ flutter run --dart-define=TWILIO_ACCOUNT_SID=your_account_sid_here --dart-define
 
 ### Common Issues
 
-1. **"Twilio SMS service is not configured"**
+1. **"Error 21608: The number is unverified" (Most Common)**
+   - **Solution**: Verify the phone number in Twilio Console (see Step 4 above)
+   - **Alternative**: Upgrade to a paid Twilio account
+   - This error occurs when using trial accounts with unverified numbers
+
+2. **"Twilio SMS service is not configured"**
    - Ensure all three environment variables are set correctly
    - Check that values don't contain the placeholder text
 
-2. **"Invalid phone number format"**
+3. **"Invalid phone number format"**
    - Ensure phone number is in E.164 format (+1234567890)
    - Remove any spaces, dashes, or parentheses
 
-3. **"Failed to send SMS"**
+4. **"Failed to send SMS"**
    - Check your Twilio account balance
    - Verify the phone number is verified in your Twilio account (for trial accounts)
    - Check Twilio Console logs for detailed error messages
 
-4. **SMS not received**
+5. **SMS not received**
    - Check if the recipient number is verified (required for trial accounts)
    - Verify the sender phone number is active in Twilio
    - Check spam/junk folders

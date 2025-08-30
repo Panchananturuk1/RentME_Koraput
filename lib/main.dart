@@ -3,22 +3,36 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/navigation_service.dart';
 import 'services/supabase_service.dart';
+import 'services/auth_service.dart';
+import 'services/firebase_auth_service.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
   // Initialize Supabase
   await SupabaseService.initialize();
   
   // Initialize Hive for local storage
   await Hive.initFlutter();
+  
+  // Initialize AuthService
+  await AuthService().initialize();
+  
+  // Initialize FirebaseAuthService
+  await FirebaseAuthService.instance.initialize();
   
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

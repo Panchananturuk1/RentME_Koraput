@@ -1,23 +1,28 @@
-import 'package:otpless_flutter/otpless_flutter.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'whatsapp_cloud_service.dart';
 
 class WhatsAppOTPService {
   static final WhatsAppOTPService _instance = WhatsAppOTPService._internal();
   factory WhatsAppOTPService() => _instance;
   WhatsAppOTPService._internal();
 
-  final Otpless _otplessFlutterPlugin = Otpless();
+  final WhatsAppCloudService _whatsappCloudService = WhatsAppCloudService();
   bool _isInitialized = false;
-  static const String appId = 'YOUR_OTPLESS_APP_ID'; // Replace with your actual App ID
+  
+  // Store current OTP session data
+  String? _currentOtpId;
+  String? _currentPhoneNumber;
 
   /// Initialize the service
   Future<void> initialize() async {
     if (_isInitialized) return;
     
     try {
-      // Initialize OTPless with app ID
-      await _otplessFlutterPlugin.initHeadless(appId);
+      // Check if WhatsApp Cloud API is configured
+      if (!_whatsappCloudService.isConfigured) {
+        throw Exception('WhatsApp Cloud API is not configured. Please check your environment variables.');
+      }
       
       _isInitialized = true;
       print('WhatsApp OTP Service initialized successfully');
@@ -27,86 +32,42 @@ class WhatsAppOTPService {
     }
   }
 
-  /// Open login page for WhatsApp authentication
-  Future<Map<String, dynamic>> openLoginPage() async {
+  /// Check if WhatsApp Cloud API is configured
+  bool get isConfigured => _whatsappCloudService.isConfigured;
+  
+  /// Get business profile information
+  Future<Map<String, dynamic>> getBusinessProfile() async {
     try {
       if (!_isInitialized) {
         await initialize();
       }
-
-      Map<String, dynamic> arg = {'appId': appId};
       
-      // Use a completer to handle the callback
-      final completer = Completer<Map<String, dynamic>>();
-      
-      _otplessFlutterPlugin.openLoginPage((result) {
-        completer.complete({
-          'success': true,
-          'message': 'Login page opened successfully',
-          'data': result,
-        });
-      }, arg);
-      
-      return await completer.future;
+      return await _whatsappCloudService.getBusinessProfile();
     } catch (e) {
-      print('Error opening login page: $e');
+      print('Error getting business profile: $e');
       return {
         'success': false,
-        'message': 'Failed to open login page: $e',
+        'message': 'Failed to get business profile: $e',
         'error': e.toString(),
       };
     }
   }
 
-  /// Start headless authentication with WhatsApp
-  Future<Map<String, dynamic>> startHeadlessAuth() async {
+  /// Check if WhatsApp is available (always true for Cloud API)
+  Future<bool> isWhatsAppAvailable() async {
     try {
       if (!_isInitialized) {
         await initialize();
       }
-
-      Map<String, dynamic> arg = {'channelType': 'WHATSAPP'};
       
-      // Use a completer to handle the callback
-      final completer = Completer<Map<String, dynamic>>();
-      
-      _otplessFlutterPlugin.startHeadless((result) {
-        completer.complete({
-          'success': true,
-          'message': 'Headless authentication started',
-          'data': result,
-        });
-      }, arg);
-      
-      return await completer.future;
+      return _whatsappCloudService.isConfigured;
     } catch (e) {
-      print('Error starting headless auth: $e');
-      return {
-        'success': false,
-        'message': 'Failed to start headless authentication: $e',
-        'error': e.toString(),
-      };
+      print('Error checking WhatsApp availability: $e');
+      return false;
     }
   }
 
-  /// Authenticate with WhatsApp using intent URL (legacy method)
-  Future<Map<String, dynamic>> loginWithWhatsApp({
-    required String intentUrl,
-  }) async {
-    try {
-      // For now, use the open login page method
-      return await openLoginPage();
-    } catch (e) {
-      print('Error with WhatsApp login: $e');
-      return {
-        'success': false,
-        'message': 'Failed to login with WhatsApp: $e',
-        'error': e.toString(),
-      };
-    }
-  }
-
-  /// Send OTP via WhatsApp (using headless method)
+  /// Send OTP via WhatsApp Cloud API
   Future<Map<String, dynamic>> sendWhatsAppOTP({
     required String phoneNumber,
     String? countryCode,
@@ -116,39 +77,26 @@ class WhatsAppOTPService {
         await initialize();
       }
 
-      // Format phone number with country code
+      // Format phone number
       String formattedNumber = phoneNumber;
       if (countryCode != null && !phoneNumber.startsWith('+')) {
         formattedNumber = '$countryCode$phoneNumber';
       }
-      if (!formattedNumber.startsWith('+')) {
+      if (!formattedNumber.startsWith('+') && !formattedNumber.startsWith('91')) {
         formattedNumber = '+91$formattedNumber'; // Default to India
       }
-
-      Map<String, dynamic> arg = {
-        'channelType': 'WHATSAPP',
-        'phone': formattedNumber,
-      };
       
-      final completer = Completer<Map<String, dynamic>>();
+      // Clean up any existing expired OTPs
+      _whatsappCloudService.cleanupExpiredOTPs();
       
-      _otplessFlutterPlugin.startHeadless((result) {
-        if (result['success'] == true) {
-          completer.complete({
-            'success': true,
-            'message': 'OTP sent successfully via WhatsApp',
-            'orderId': result['orderId'],
-            'phoneNumber': formattedNumber,
-          });
-        } else {
-          completer.complete({
-            'success': false,
-            'message': result['message'] ?? 'Failed to send OTP',
-          });
-        }
-      }, arg);
+      final result = await _whatsappCloudService.sendOTP(formattedNumber);
       
-      return await completer.future;
+      if (result['success'] == true) {
+        _currentOtpId = result['otpId'];
+        _currentPhoneNumber = result['phoneNumber'];
+      }
+      
+      return result;
     } catch (e) {
       print('Error sending WhatsApp OTP: $e');
       return {
@@ -158,43 +106,38 @@ class WhatsAppOTPService {
     }
   }
 
-  /// Verify OTP received via WhatsApp (using headless method)
+
+
+  /// Verify OTP received via WhatsApp Cloud API
   Future<Map<String, dynamic>> verifyWhatsAppOTP({
-    required String phoneNumber,
     required String otp,
-    required String orderId,
+    String? otpId,
+    String? phoneNumber,
   }) async {
     try {
       if (!_isInitialized) {
         await initialize();
       }
 
-      Map<String, dynamic> arg = {
-        'channelType': 'WHATSAPP',
-        'phone': phoneNumber,
-        'otp': otp,
-        'orderId': orderId,
-      };
+      // Use provided otpId or the current session's otpId
+      final sessionOtpId = otpId ?? _currentOtpId;
       
-      final completer = Completer<Map<String, dynamic>>();
+      if (sessionOtpId == null) {
+        return {
+          'success': false,
+          'message': 'No active OTP session found. Please request a new OTP.',
+        };
+      }
       
-      _otplessFlutterPlugin.startHeadless((result) {
-        if (result['success'] == true) {
-          completer.complete({
-            'success': true,
-            'message': 'OTP verified successfully',
-            'userToken': result['token'],
-            'phoneNumber': phoneNumber,
-          });
-        } else {
-          completer.complete({
-            'success': false,
-            'message': result['message'] ?? 'Invalid OTP',
-          });
-        }
-      }, arg);
+      final result = await _whatsappCloudService.verifyOTP(sessionOtpId, otp);
       
-      return await completer.future;
+      if (result['success'] == true) {
+        // Clear current session data on successful verification
+        _currentOtpId = null;
+        _currentPhoneNumber = null;
+      }
+      
+      return result;
     } catch (e) {
       print('Error verifying WhatsApp OTP: $e');
       return {
@@ -204,61 +147,33 @@ class WhatsAppOTPService {
     }
   }
 
-  /// Alternative: Use WhatsApp Login (One-tap authentication)
-  Future<Map<String, dynamic>> authenticateWithWhatsApp() async {
-    try {
-      if (!_isInitialized) {
-        await initialize();
-      }
-
-      return await startHeadlessAuth();
-    } catch (e) {
-      print('Error with WhatsApp authentication: $e');
-      return {
-        'success': false,
-        'message': 'WhatsApp authentication failed: $e',
-      };
-    }
+  /// Get current OTP session information
+  Map<String, dynamic> getCurrentSession() {
+    return {
+      'hasActiveSession': _currentOtpId != null,
+      'otpId': _currentOtpId,
+      'phoneNumber': _currentPhoneNumber,
+    };
   }
 
-  /// Check if WhatsApp is available on the device
-  Future<bool> isWhatsAppAvailable() async {
-    try {
-      if (!_isInitialized) {
-        await initialize();
-      }
-      
-      // Check if WhatsApp is installed
-      return await _otplessFlutterPlugin.isWhatsAppInstalled();
-    } catch (e) {
-      print('Error checking WhatsApp availability: $e');
-      return false;
-    }
+  /// Clear current OTP session
+  void clearSession() {
+    _currentOtpId = null;
+    _currentPhoneNumber = null;
   }
 
-  /// Get authentication stream (not available in current version)
-  Stream<String> get authStream {
-    // Return an empty stream for now as the current API doesn't support this
-    return Stream<String>.empty();
+  /// Clean up expired OTPs
+  void cleanupExpiredOTPs() {
+    _whatsappCloudService.cleanupExpiredOTPs();
   }
 
   /// Format phone number for display
   String formatPhoneNumber(String phoneNumber) {
-    // Remove any non-digit characters except +
-    String cleaned = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-    
-    // Add country code if not present
-    if (!cleaned.startsWith('+')) {
-      cleaned = '+91$cleaned'; // Default to India
-    }
-    
-    return cleaned;
+    return _whatsappCloudService.formatPhoneNumberForDisplay(phoneNumber);
   }
 
   /// Validate phone number format
   bool isValidPhoneNumber(String phoneNumber) {
-    // Basic validation for Indian phone numbers
-    String cleaned = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-    return cleaned.length >= 10 && cleaned.length <= 15;
+    return _whatsappCloudService.isValidPhoneNumber(phoneNumber);
   }
 }

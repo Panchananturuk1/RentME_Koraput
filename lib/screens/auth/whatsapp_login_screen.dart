@@ -14,10 +14,12 @@ import 'whatsapp_otp_screen.dart';
 
 class WhatsAppLoginScreen extends StatefulWidget {
   final String userType;
+  final String? phoneNumber;
 
   const WhatsAppLoginScreen({
     Key? key,
     required this.userType,
+    this.phoneNumber,
   }) : super(key: key);
 
   @override
@@ -37,6 +39,11 @@ class _WhatsAppLoginScreenState extends State<WhatsAppLoginScreen> {
   void initState() {
     super.initState();
     _checkWhatsAppAvailability();
+    
+    // Pre-fill phone number if provided
+    if (widget.phoneNumber != null && widget.phoneNumber!.isNotEmpty) {
+      _phoneController.text = widget.phoneNumber!;
+    }
   }
 
   Future<void> _checkWhatsAppAvailability() async {

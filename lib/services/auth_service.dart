@@ -134,25 +134,12 @@ class AuthService extends ChangeNotifier {
       // Initialize WhatsApp OTP service if not already done
       await _whatsappOTPService.initialize();
       
-      final result = await _whatsappOTPService.openLoginPage();
-      
-      if (!result['success']) {
-        return result;
-      }
-      
-      // Handle the authentication result
-      final authData = result['data'];
-      if (authData != null && authData['data'] != null) {
-        return await _handleWhatsAppAuthResult(
-          authData: authData['data'],
-          userType: userType,
-        );
-      }
-      
+      // For WhatsApp Cloud API, we need to handle OTP flow differently
+      // This method should be called from the UI after phone number input
       return {
-        'success': true,
-        'message': 'WhatsApp authentication initiated',
-        'data': result['data'],
+        'success': false,
+        'message': 'WhatsApp OTP flow should be initiated from the phone login screen',
+        'requiresPhoneInput': true,
       };
     } catch (e) {
       debugPrint('Error in WhatsApp login: $e');

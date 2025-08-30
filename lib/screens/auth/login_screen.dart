@@ -9,7 +9,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../services/auth_service.dart';
 import 'whatsapp_login_screen.dart';
-import 'sms_login_screen.dart';
+import 'firebase_email_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,8 +22,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _whatsappController = TextEditingController();
   
   bool _isLoading = false;
+  bool _isWhatsAppLoading = false;
   bool _isOTPMode = true;
   String _selectedUserType = AppConstants.userTypePassenger;
   final AuthService _authService = AuthService();
@@ -32,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _whatsappController.dispose();
     super.dispose();
   }
 
@@ -118,6 +121,38 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _sendWhatsAppOTP() async {
+    if (_whatsappController.text.isEmpty) {
+      _showSnackBar('Please enter your WhatsApp number', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isWhatsAppLoading = true;
+    });
+
+    try {
+      // Navigate to WhatsApp login screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WhatsAppLoginScreen(
+            phoneNumber: _whatsappController.text,
+            userType: _selectedUserType,
+          ),
+        ),
+      );
+    } catch (e) {
+      _showSnackBar('Error: $e', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isWhatsAppLoading = false;
         });
       }
     }
@@ -225,125 +260,69 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 SizedBox(height: 32.h),
 
-                // Email Input
-                Text(
-                  'Email',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                CustomTextField(
-                  controller: _emailController,
-                  hintText: 'Enter your email address',
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIcon: Icons.email,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-
-                SizedBox(height: 16.h),
-
-                // Authentication mode toggle
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _isOTPMode = true),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 12.h),
-                          decoration: BoxDecoration(
-                            color: _isOTPMode ? AppTheme.primaryColor : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8.r),
-                            border: Border.all(
-                              color: _isOTPMode ? AppTheme.primaryColor : Colors.grey[300]!,
-                            ),
-                          ),
-                          child: Text(
-                            'Login with OTP',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: _isOTPMode ? Colors.white : AppTheme.textSecondary,
-                              fontWeight: _isOTPMode ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                          ),
-                        ),
+                // WhatsApp OTP Section
+                Container(
+                  padding: EdgeInsets.all(20.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: const Color(0xFF25D366), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _isOTPMode = false),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 12.h),
-                          decoration: BoxDecoration(
-                            color: !_isOTPMode ? AppTheme.primaryColor : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8.r),
-                            border: Border.all(
-                              color: !_isOTPMode ? AppTheme.primaryColor : Colors.grey[300]!,
-                            ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.chat,
+                            color: const Color(0xFF25D366),
+                            size: 20.sp,
                           ),
-                          child: Text(
-                            'Login with Password',
-                            textAlign: TextAlign.center,
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Login with WhatsApp OTP',
                             style: TextStyle(
-                              fontSize: 14.sp,
-                              color: !_isOTPMode ? Colors.white : AppTheme.textSecondary,
-                              fontWeight: !_isOTPMode ? FontWeight.w600 : FontWeight.normal,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF25D366),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-
-                if (!_isOTPMode) ...[
-                  SizedBox(height: 16.h),
-                  // Password field (only show in password mode)
-                  Text(
-                    'Password',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
+                      SizedBox(height: 16.h),
+                      CustomTextField(
+                        controller: _whatsappController,
+                        hintText: 'Enter WhatsApp number',
+                        keyboardType: TextInputType.phone,
+                        prefixIcon: Icons.phone,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your WhatsApp number';
+                          }
+                          if (!RegExp(r'^[+]?[0-9]{10,15}$').hasMatch(value)) {
+                            return 'Please enter a valid phone number';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 16.h),
+                      CustomButton(
+                        text: 'Send OTP',
+                        onPressed: _sendWhatsAppOTP,
+                        isLoading: _isWhatsAppLoading,
+                        backgroundColor: const Color(0xFF25D366),
+                        textColor: Colors.white,
+                        icon: Icons.send,
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 8.h),
-                  CustomTextField(
-                    controller: _passwordController,
-                    hintText: 'Enter your password',
-                    prefixIcon: Icons.lock,
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-
-                SizedBox(height: 32.h),
-
-                // Login Button
-                CustomButton(
-                  text: _isOTPMode ? 'Send OTP' : 'Login',
-                  onPressed: _login,
-                  isLoading: _isLoading,
                 ),
 
                 SizedBox(height: 24.h),
@@ -368,14 +347,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 SizedBox(height: 24.h),
 
-                // SMS Login Button
+                // Firebase Email Login Button
                 CustomButton(
-                  text: 'Continue with SMS',
+                  text: 'Login with Email (Firebase)',
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => SmsLoginScreen(
+                        builder: (context) => FirebaseEmailLoginScreen(
                           userType: _selectedUserType,
                         ),
                       ),
@@ -383,42 +362,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   isLoading: false,
                   isOutlined: true,
-                  backgroundColor: const Color(0xFF2196F3),
-                  textColor: Colors.white,
-                  icon: Icons.sms,
-                ),
-
-                SizedBox(height: 16.h),
-
-                // WhatsApp Login Button
-                CustomButton(
-                  text: 'Continue with WhatsApp',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => WhatsAppLoginScreen(
-                          userType: _selectedUserType,
-                        ),
-                      ),
-                    );
-                  },
-                  isLoading: false,
-                  isOutlined: true,
-                  backgroundColor: const Color(0xFF25D366),
-                  textColor: Colors.white,
-                  icon: Icons.chat,
-                ),
-
-                SizedBox(height: 16.h),
-
-                // Google Login Button
-                CustomButton(
-                  text: 'Continue with Google',
-                  onPressed: _loginWithGoogle,
-                  isLoading: _isLoading,
-                  isOutlined: true,
-                  icon: Icons.g_mobiledata,
+                  backgroundColor: const Color(0xFFFBBC04),
+                  textColor: Colors.black,
+                  icon: Icons.email,
                 ),
 
                 SizedBox(height: 32.h),
