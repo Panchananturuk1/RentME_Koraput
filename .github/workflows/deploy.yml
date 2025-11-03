@@ -31,8 +31,8 @@ jobs:
       
     - name: Copy build files to root
       run: |
-        Remove-Item -Path "index.html" -Force -ErrorAction SilentlyContinue
-        Copy-Item -Path "build/web/*" -Destination "." -Recurse -Force
+        rm -f index.html
+        cp -r build/web/* .
       
     - name: Deploy to Vercel
       uses: amondnet/vercel-action@v25
