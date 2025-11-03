@@ -1,0 +1,10 @@
+pubspec.yaml
+pubspec.lock
+lib/
+android/
+ios/
+windows/
+test/
+build.sh
+.metadata
+analysis_options.yaml
