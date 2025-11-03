@@ -2,6 +2,9 @@
   "github": {
     "silent": true
   },
+  "buildCommand": null,
+  "installCommand": null,
+  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",

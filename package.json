@@ -1,0 +1,9 @@
+{
+  "name": "rentme-koraput-static",
+  "version": "1.0.0",
+  "description": "Static Flutter web app",
+  "scripts": {
+    "build": "echo 'Build handled by GitHub Actions'"
+  },
+  "private": true
+}
