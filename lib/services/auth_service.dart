@@ -67,6 +67,106 @@ class AuthService {
     }
   }
 
+  // Update password
+  static Future<UserResponse> updatePassword(String newPassword) async {
+    try {
+      final response = await _auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Verify OTP and update password (for code-based reset)
+  static Future<AuthResponse> verifyOtpAndUpdatePassword({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      // First verify the OTP
+      final response = await _auth.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.recovery,
+      );
+      
+      if (response.user != null) {
+        // If verification successful, update the password
+        await _auth.updateUser(
+          UserAttributes(password: newPassword),
+        );
+      }
+      
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Simplified password reset for authenticated users
+  static Future<bool> updatePasswordForAuthenticatedUser(String newPassword) async {
+    try {
+      print('🔄 Updating password for authenticated user...');
+      print('Current user: ${currentUser?.email}');
+      
+      if (currentUser == null) {
+        print('❌ No authenticated user found');
+        return false;
+      }
+      
+      final updateResponse = await _auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      
+      print('✅ Password update successful: ${updateResponse.user != null}');
+      return updateResponse.user != null;
+    } catch (e) {
+      print('💥 Error updating password: $e');
+      throw e;
+    }
+  }
+
+  // Verify recovery code and update password (for password reset links)
+  static Future<bool> verifyCodeAndUpdatePassword({
+    required String code,
+    required String newPassword,
+  }) async {
+    try {
+      print('🔄 Attempting to verify recovery code...');
+      print('Code: $code');
+      
+      // Verify the recovery code (this doesn't require PKCE)
+      final response = await _auth.verifyOTP(
+        token: code,
+        type: OtpType.recovery,
+      );
+      
+      print('📋 Verify response received');
+      print('Session exists: ${response.session != null}');
+      
+      if (response.session != null) {
+        print('✅ Code verified, updating password...');
+        
+        // If verification successful, update the password
+        final updateResponse = await _auth.updateUser(
+          UserAttributes(password: newPassword),
+        );
+        
+        print('Password update response: ${updateResponse.user != null}');
+        return updateResponse.user != null;
+      } else {
+        print('❌ Failed to verify recovery code');
+        return false;
+      }
+    } catch (e) {
+      print('💥 Error in verifyCodeAndUpdatePassword: $e');
+      rethrow;
+    }
+  }
+
   // Listen to auth state changes
   static Stream<AuthState> get authStateChanges => _auth.onAuthStateChange;
 
@@ -105,6 +205,18 @@ class AuthService {
           email: currentUser!.email!,
         );
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Set session with refresh token
+  static Future<AuthResponse> setSession({
+    required String refreshToken,
+  }) async {
+    try {
+      final response = await _auth.setSession(refreshToken);
+      return response;
     } catch (e) {
       rethrow;
     }

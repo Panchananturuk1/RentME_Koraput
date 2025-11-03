@@ -328,7 +328,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      // TODO: Implement forgot password
+                      print('Forgot Password button pressed'); // Debug print
+                      Navigator.of(context).pushNamed('/forgot-password');
                     },
                     child: Text(
                       'Forgot Password?',

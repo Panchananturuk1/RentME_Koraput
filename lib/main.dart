@@ -5,6 +5,8 @@ import 'config/supabase_config.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/splash_screen.dart';
 
@@ -77,10 +79,22 @@ class MyApp extends StatelessWidget {
               ),
             ),
             home: const AuthWrapper(),
-            routes: {
-              '/login': (context) => const LoginScreen(),
-              '/signup': (context) => const SignupScreen(),
-              '/dashboard': (context) => const DashboardScreen(),
+            onGenerateRoute: (settings) {
+              // Handle regular routes
+              switch (settings.name) {
+                case '/login':
+                  return MaterialPageRoute(builder: (context) => const LoginScreen());
+                case '/signup':
+                  return MaterialPageRoute(builder: (context) => const SignupScreen());
+                case '/forgot-password':
+                  return MaterialPageRoute(builder: (context) => const ForgotPasswordScreen());
+                case '/reset-password':
+                  return MaterialPageRoute(builder: (context) => const ResetPasswordScreen());
+                case '/dashboard':
+                  return MaterialPageRoute(builder: (context) => const DashboardScreen());
+                default:
+                  return MaterialPageRoute(builder: (context) => const AuthWrapper());
+              }
             },
           ),
         );
@@ -89,8 +103,76 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    _checkForPasswordReset();
+  }
+
+  void _checkForPasswordReset() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Debug: Print current URL information
+      print('Current URL: ${Uri.base}');
+      print('Fragment: ${Uri.base.fragment}');
+      print('Query: ${Uri.base.query}');
+      print('All query parameters: ${Uri.base.queryParameters}');
+      
+      // Check if we're on web and have a password reset URL
+      // Check both fragment (for #access_token&refresh_token) and query (for ?code=)
+      bool isPasswordReset = false;
+      String? refreshToken;
+      String? code;
+      String? tokenHash;
+      
+      // Check fragment for direct token-based reset
+      if (Uri.base.fragment.contains('refresh_token') && 
+          Uri.base.fragment.contains('type=recovery')) {
+        final fragment = Uri.base.fragment;
+        print('Password reset detected in fragment! Fragment: $fragment');
+        final params = Uri.splitQueryString(fragment);
+        refreshToken = params['refresh_token'];
+        tokenHash = params['token_hash'];
+        isPasswordReset = true;
+      }
+      
+      // Check query parameters for code-based reset
+      final queryParams = Uri.base.queryParameters;
+      if (queryParams.containsKey('code')) {
+        code = queryParams['code'];
+        print('Password reset code detected in query! Code: $code');
+        isPasswordReset = true;
+      }
+      
+      // Also check for token_hash in query parameters
+      if (queryParams.containsKey('token_hash')) {
+        tokenHash = queryParams['token_hash'];
+        print('Token hash detected in query! TokenHash: $tokenHash');
+        isPasswordReset = true;
+      }
+      
+      if (isPasswordReset) {
+        print('Navigating to reset password screen...');
+        // Navigate to reset password screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ResetPasswordScreen(
+              refreshToken: refreshToken,
+              resetCode: code,
+              tokenHash: tokenHash,
+            ),
+          ),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
