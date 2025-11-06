@@ -29,14 +29,10 @@ jobs:
     - name: Build web app
       run: flutter build web --release --base-href /
       
-    - name: Copy build files to root
-      run: |
-        rm -f index.html
-        cp -r build/web/* .
-      
     - name: Deploy to Vercel
       uses: amondnet/vercel-action@v25
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
         vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: ./build/web
