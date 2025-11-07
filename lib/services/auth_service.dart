@@ -5,6 +5,7 @@ import '../config/supabase_config.dart';
 class AuthService {
   static final SupabaseClient _client = SupabaseConfig.client;
   static final GoTrueClient _auth = SupabaseConfig.auth;
+  static const String _envBaseUrl = String.fromEnvironment('APP_BASE_URL', defaultValue: '');
 
   // Get current user
   static User? get currentUser => _auth.currentUser;
@@ -177,6 +178,10 @@ class AuthService {
 
   // Determine environment-aware redirect URL for password reset
   static String _computePasswordResetRedirectUrl() {
+    // Prefer environment-provided base URL if set
+    if (_envBaseUrl.isNotEmpty) {
+      return _envBaseUrl;
+    }
     // On web:
     // - In release (Vercel), always use the production domain
     // - In debug (local dev), use current origin (includes the dev port)
