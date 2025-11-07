@@ -42,7 +42,7 @@ ALTER TABLE public.tent_bookings ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tents' AND polname = 'tents_select_active'
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tents' AND policyname = 'tents_select_active'
   ) THEN
     CREATE POLICY tents_select_active ON public.tents
       FOR SELECT
@@ -54,7 +54,7 @@ END$$;
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tent_bookings' AND polname = 'bookings_select_own'
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tent_bookings' AND policyname = 'bookings_select_own'
   ) THEN
     CREATE POLICY bookings_select_own ON public.tent_bookings
       FOR SELECT
@@ -62,7 +62,7 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tent_bookings' AND polname = 'bookings_insert_own'
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tent_bookings' AND policyname = 'bookings_insert_own'
   ) THEN
     CREATE POLICY bookings_insert_own ON public.tent_bookings
       FOR INSERT
@@ -70,7 +70,7 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tent_bookings' AND polname = 'bookings_update_own'
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tent_bookings' AND policyname = 'bookings_update_own'
   ) THEN
     CREATE POLICY bookings_update_own ON public.tent_bookings
       FOR UPDATE
