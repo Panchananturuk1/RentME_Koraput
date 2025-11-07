@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../services/tent_service.dart';
+import '../../services/car_service.dart';
+import '../../services/ride_service.dart';
 import '../../providers/auth_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -390,6 +392,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (!service.available) return;
         if (service.id == 'tents') {
           Navigator.of(context).pushNamed('/camping');
+        } else if (service.id == 'cars') {
+          Navigator.of(context).pushNamed('/cars');
+        } else if (service.id == 'rides') {
+          Navigator.of(context).pushNamed('/ride');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('${service.title} coming soon')),
@@ -539,70 +545,224 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (bookings.isEmpty) {
                 return Center(child: const Text('No bookings yet'));
               }
-              return ListView.separated(
-                itemCount: bookings.length,
-                separatorBuilder: (_, __) => SizedBox(height: 12.h),
-                itemBuilder: (context, i) {
-                  final b = bookings[i];
-                  final tent = b['tents'] as Map<String, dynamic>?;
-                  final tentName = tent != null ? tent['name']?.toString() ?? 'Tent' : 'Tent';
-                  final start = DateTime.tryParse(b['start_date'].toString());
-                  final end = DateTime.tryParse(b['end_date'].toString());
-                  final nights = b['nights']?.toString() ?? '0';
-                  final qty = b['quantity']?.toString() ?? '1';
-                  final total = (b['total_price'] as num?)?.toDouble() ?? 0;
-                  final status = b['status']?.toString() ?? 'pending';
-
-                  return Container(
-                    padding: EdgeInsets.all(16.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              tentName,
-                              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              return SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Ride Bookings', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
+                    SizedBox(height: 8.h),
+                    FutureBuilder<List<Map<String, dynamic>>>(
+                      future: RideService.fetchUserBookings(),
+                      builder: (context, rideSnap) {
+                        if (rideSnap.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (rideSnap.hasError) {
+                          return Center(child: Text('Error: ${rideSnap.error}'));
+                        }
+                        final rides = rideSnap.data ?? [];
+                        if (rides.isEmpty) {
+                          return const Text('No ride bookings');
+                        }
+                        return Column(
+                          children: rides.map((b) {
+                            final pickup = b['pickup_location']?.toString() ?? 'Pickup';
+                            final drop = b['dropoff_location']?.toString() ?? 'Drop-off';
+                            final time = DateTime.tryParse(b['pickup_time']?.toString() ?? '');
+                            final seats = b['seats']?.toString() ?? '1';
+                            final fare = (b['fare_estimate'] as num?)?.toDouble();
+                            final status = b['status']?.toString() ?? 'pending';
+                            return Container(
+                              margin: EdgeInsets.only(bottom: 12.h),
+                              padding: EdgeInsets.all(16.w),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF3F4F6),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(12.r),
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2)),
+                                ],
                               ),
-                              child: Text(status),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          '${start != null ? start.toIso8601String().substring(0,10) : '?'} → ${end != null ? end.toIso8601String().substring(0,10) : '?'}',
-                          style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)),
-                        ),
-                        SizedBox(height: 8.h),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Nights: $nights · Qty: $qty'),
-                            Text('₹${total.toStringAsFixed(2)}'),
-                          ],
-                        ),
-                      ],
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    Icon(Icons.local_taxi, size: 18.sp, color: const Color(0xFF3B82F6)),
+                                    SizedBox(width: 8.w),
+                                    Expanded(child: Text('$pickup → $drop', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)))
+                                  ]),
+                                  SizedBox(height: 6.h),
+                                  Row(children: [
+                                    Icon(Icons.schedule, size: 16.sp, color: const Color(0xFF6B7280)),
+                                    SizedBox(width: 6.w),
+                                    Text(time != null ? time!.toLocal().toString() : '—', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)))
+                                  ]),
+                                  SizedBox(height: 6.h),
+                                  Row(children: [
+                                    Icon(Icons.event_seat, size: 16.sp, color: const Color(0xFF6B7280)),
+                                    SizedBox(width: 6.w),
+                                    Text('Seats: $seats${fare != null ? ' • ₹${fare.toStringAsFixed(2)}' : ''}', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)))
+                                  ]),
+                                  SizedBox(height: 8.h),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                    decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(8.r)),
+                                    child: Text(status.toUpperCase(), style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
                     ),
-                  );
-                },
+
+                    SizedBox(height: 16.h),
+                    Text('Car Rentals', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
+                    SizedBox(height: 8.h),
+                    FutureBuilder<List<Map<String, dynamic>>>(
+                      future: CarService.fetchUserRentals(),
+                      builder: (context, carSnap) {
+                        if (carSnap.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (carSnap.hasError) {
+                          return Center(child: Text('Error: ${carSnap.error}'));
+                        }
+                        final cars = carSnap.data ?? [];
+                        if (cars.isEmpty) {
+                          return const Text('No car rentals');
+                        }
+                        return Column(
+                          children: cars.map((b) {
+                            final car = b['cars'] as Map<String, dynamic>?;
+                            final carName = car != null ? [car['brand']?.toString(), car['model']?.toString()].whereType<String>().where((s) => s.isNotEmpty).join(' ') : 'Car';
+                            final start = DateTime.tryParse(b['start_date']?.toString() ?? '');
+                            final end = DateTime.tryParse(b['end_date']?.toString() ?? '');
+                            final days = b['days']?.toString() ?? '0';
+                            final qty = b['quantity']?.toString() ?? '1';
+                            final total = (b['total_price'] as num?)?.toDouble() ?? 0;
+                            final status = b['status']?.toString() ?? 'pending';
+                            return Container(
+                              margin: EdgeInsets.only(bottom: 12.h),
+                              padding: EdgeInsets.all(16.w),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12.r),
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2)),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    Icon(Icons.directions_car, size: 18.sp, color: const Color(0xFF8B5CF6)),
+                                    SizedBox(width: 8.w),
+                                    Expanded(child: Text(carName.isNotEmpty ? carName : 'Car', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)))
+                                  ]),
+                                  SizedBox(height: 6.h),
+                                  Row(children: [
+                                    Icon(Icons.calendar_today, size: 16.sp, color: const Color(0xFF6B7280)),
+                                    SizedBox(width: 6.w),
+                                    Text('${start != null ? start.toIso8601String().substring(0, 10) : '?'} → ${end != null ? end.toIso8601String().substring(0, 10) : '?'}', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)))
+                                  ]),
+                                  SizedBox(height: 6.h),
+                                  Row(children: [
+                                    Icon(Icons.format_list_numbered, size: 16.sp, color: const Color(0xFF6B7280)),
+                                    SizedBox(width: 6.w),
+                                    Text('Days: $days • Qty: $qty', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)))
+                                  ]),
+                                  SizedBox(height: 6.h),
+                                  Row(children: [
+                                    Icon(Icons.payments, size: 16.sp, color: const Color(0xFF6B7280)),
+                                    SizedBox(width: 6.w),
+                                    Text('₹${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)))
+                                  ]),
+                                  SizedBox(height: 8.h),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                    decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(8.r)),
+                                    child: Text(status.toUpperCase(), style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+
+                    SizedBox(height: 16.h),
+                    Text('Tent Stays', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
+                    SizedBox(height: 8.h),
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: bookings.length,
+                      separatorBuilder: (_, __) => SizedBox(height: 12.h),
+                      itemBuilder: (context, i) {
+                        final b = bookings[i];
+                        final tent = b['tents'] as Map<String, dynamic>?;
+                        final tentName = tent != null ? tent['name']?.toString() ?? 'Tent' : 'Tent';
+                        final start = DateTime.tryParse(b['start_date'].toString());
+                        final end = DateTime.tryParse(b['end_date'].toString());
+                        final nights = b['nights']?.toString() ?? '0';
+                        final qty = b['quantity']?.toString() ?? '1';
+                        final total = (b['total_price'] as num?)?.toDouble() ?? 0;
+                        final status = b['status']?.toString() ?? 'pending';
+                        return Container(
+                          padding: EdgeInsets.all(16.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    tentName,
+                                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF3F4F6),
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                    child: Text(status),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 8.h),
+                              Text(
+                                '${start != null ? start.toIso8601String().substring(0,10) : '?'} → ${end != null ? end.toIso8601String().substring(0,10) : '?'}',
+                                style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)),
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Nights: $nights · Qty: $qty'),
+                                  Text('₹${total.toStringAsFixed(2)}'),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               );
             },
           );

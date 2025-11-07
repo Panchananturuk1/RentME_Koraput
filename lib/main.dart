@@ -11,6 +11,9 @@ import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/splash_screen.dart';
 import 'providers/tent_provider.dart';
 import 'screens/camping/camping_booking_screen.dart';
+import 'providers/car_provider.dart';
+import 'screens/cars/car_booking_screen.dart';
+import 'screens/rides/ride_booking_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +38,7 @@ class MyApp extends StatelessWidget {
           providers: [
             ChangeNotifierProvider(create: (_) => AuthProvider()),
             ChangeNotifierProvider(create: (_) => TentProvider()),
+            ChangeNotifierProvider(create: (_) => CarProvider()),
           ],
           child: MaterialApp(
             title: 'RentMe Koraput',
@@ -93,12 +97,16 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(builder: (context) => const ForgotPasswordScreen());
                 case '/reset-password':
                   return MaterialPageRoute(builder: (context) => const ResetPasswordScreen());
-                case '/dashboard':
-                  return MaterialPageRoute(builder: (context) => const DashboardScreen());
-                case '/camping':
-                  return MaterialPageRoute(builder: (context) => const CampingBookingScreen());
-                default:
-                  return MaterialPageRoute(builder: (context) => const AuthWrapper());
+              case '/dashboard':
+                return MaterialPageRoute(builder: (context) => const DashboardScreen());
+              case '/camping':
+                return MaterialPageRoute(builder: (context) => const CampingBookingScreen());
+              case '/cars':
+                return MaterialPageRoute(builder: (context) => const CarBookingScreen());
+              case '/ride':
+                return MaterialPageRoute(builder: (context) => const RideBookingScreen());
+              default:
+                return MaterialPageRoute(builder: (context) => const AuthWrapper());
               }
             },
           ),
