@@ -9,6 +9,8 @@ import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/splash_screen.dart';
+import 'providers/tent_provider.dart';
+import 'screens/camping/camping_booking_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +34,7 @@ class MyApp extends StatelessWidget {
         return MultiProvider(
           providers: [
             ChangeNotifierProvider(create: (_) => AuthProvider()),
+            ChangeNotifierProvider(create: (_) => TentProvider()),
           ],
           child: MaterialApp(
             title: 'RentMe Koraput',
@@ -92,6 +95,8 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(builder: (context) => const ResetPasswordScreen());
                 case '/dashboard':
                   return MaterialPageRoute(builder: (context) => const DashboardScreen());
+                case '/camping':
+                  return MaterialPageRoute(builder: (context) => const CampingBookingScreen());
                 default:
                   return MaterialPageRoute(builder: (context) => const AuthWrapper());
               }
