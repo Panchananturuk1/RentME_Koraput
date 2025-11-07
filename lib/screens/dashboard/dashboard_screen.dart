@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import '../../services/tent_service.dart';
 import '../../providers/auth_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -64,35 +65,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
             
             // Main Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 20.h),
-                    
-                    // Welcome Section
-                    _buildWelcomeSection(),
-                    
-                    SizedBox(height: 24.h),
-                    
-                    // Quick Stats
-                    _buildQuickStats(),
-                    
-                    SizedBox(height: 24.h),
-                    
-                    // Services Section
-                    _buildServicesSection(),
-                    
-                    SizedBox(height: 24.h),
-                    
-                    // Recent Activity
-                    _buildRecentActivity(),
-                    
-                    SizedBox(height: 100.h), // Bottom padding for navigation
-                  ],
-                ),
-              ),
+              child: _selectedIndex == 2
+                  ? _buildBookingsTab()
+                  : SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 20.h),
+                          
+                          // Welcome Section
+                          _buildWelcomeSection(),
+                          
+                          SizedBox(height: 24.h),
+                          
+                          // Quick Stats
+                          _buildQuickStats(),
+                          
+                          SizedBox(height: 24.h),
+                          
+                          // Services Section
+                          _buildServicesSection(),
+                          
+                          SizedBox(height: 24.h),
+                          
+                          // Recent Activity
+                          _buildRecentActivity(),
+                          
+                          SizedBox(height: 100.h), // Bottom padding for navigation
+                        ],
+                      ),
+                    ),
             ),
           ],
         ),
@@ -382,118 +385,228 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildServiceCard(ServiceItem service) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Icon and Status
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 48.w,
-                height: 48.w,
-                decoration: BoxDecoration(
-                  color: service.color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  service.icon,
-                  color: service.color,
-                  size: 24.sp,
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: service.available 
-                      ? const Color(0xFFDCFCE7) 
-                      : const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  service.available ? 'Available' : 'Coming Soon',
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w500,
-                    color: service.available 
-                        ? const Color(0xFF16A34A) 
-                        : const Color(0xFF6B7280),
+    return InkWell(
+      onTap: () {
+        if (!service.available) return;
+        if (service.id == 'tents') {
+          Navigator.of(context).pushNamed('/camping');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${service.title} coming soon')),
+          );
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 48.w,
+                  height: 48.w,
+                  decoration: BoxDecoration(
+                    color: service.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Icon(
+                    service.icon,
+                    color: service.color,
+                    size: 24.sp,
                   ),
                 ),
-              ),
-            ],
-          ),
-          
-          SizedBox(height: 12.h),
-          
-          // Title
-          Text(
-            service.title,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1F2937),
-            ),
-          ),
-          
-          SizedBox(height: 4.h),
-          
-          // Subtitle
-          Text(
-            service.subtitle,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: const Color(0xFF6B7280),
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          
-          const Spacer(),
-          
-          // Rating and Action
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.star,
-                    color: const Color(0xFFFBBF24),
-                    size: 14.sp,
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: service.available
+                        ? const Color(0xFFDCFCE7)
+                        : const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    service.rating.toString(),
+                  child: Text(
+                    service.available ? 'Available' : 'Coming Soon',
                     style: TextStyle(
-                      fontSize: 12.sp,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w500,
-                      color: const Color(0xFF6B7280),
+                      color: service.available
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF6B7280),
                     ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              service.title,
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1F2937),
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              service.subtitle,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: const Color(0xFF6B7280),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.star,
+                      color: const Color(0xFFFBBF24),
+                      size: 14.sp,
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      service.rating.toString(),
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: const Color(0xFF9CA3AF),
+                  size: 14.sp,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookingsTab() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+      child: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (!auth.isLoggedIn) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.lock_outline, size: 48, color: Color(0xFF9CA3AF)),
+                  SizedBox(height: 12.h),
+                  const Text('Sign in to view your bookings'),
+                  SizedBox(height: 12.h),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pushNamed('/login'),
+                    child: const Text('Go to Login'),
                   ),
                 ],
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: const Color(0xFF9CA3AF),
-                size: 14.sp,
-              ),
-            ],
-          ),
-        ],
+            );
+          }
+
+          return FutureBuilder<List<Map<String, dynamic>>>(
+            future: TentService.fetchUserBookings(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              final bookings = snapshot.data ?? [];
+              if (bookings.isEmpty) {
+                return Center(child: const Text('No bookings yet'));
+              }
+              return ListView.separated(
+                itemCount: bookings.length,
+                separatorBuilder: (_, __) => SizedBox(height: 12.h),
+                itemBuilder: (context, i) {
+                  final b = bookings[i];
+                  final tent = b['tents'] as Map<String, dynamic>?;
+                  final tentName = tent != null ? tent['name']?.toString() ?? 'Tent' : 'Tent';
+                  final start = DateTime.tryParse(b['start_date'].toString());
+                  final end = DateTime.tryParse(b['end_date'].toString());
+                  final nights = b['nights']?.toString() ?? '0';
+                  final qty = b['quantity']?.toString() ?? '1';
+                  final total = (b['total_price'] as num?)?.toDouble() ?? 0;
+                  final status = b['status']?.toString() ?? 'pending';
+
+                  return Container(
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              tentName,
+                              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(status),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          '${start != null ? start.toIso8601String().substring(0,10) : '?'} → ${end != null ? end.toIso8601String().substring(0,10) : '?'}',
+                          style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)),
+                        ),
+                        SizedBox(height: 8.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Nights: $nights · Qty: $qty'),
+                            Text('₹${total.toStringAsFixed(2)}'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
     );
   }

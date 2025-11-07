@@ -23,4 +23,19 @@ class TentService {
         .single();
     return inserted['id'] as String?;
   }
+
+  /// Fetch bookings for the current user with nested tent details.
+  static Future<List<Map<String, dynamic>>> fetchUserBookings() async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) {
+      return [];
+    }
+    final res = await _client
+        .from('tent_bookings')
+        .select('id, tent_id, start_date, end_date, nights, quantity, total_price, status, created_at, tents:tent_id(name, capacity, base_price)')
+        .eq('user_id', uid)
+        .order('created_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(res as List);
+  }
 }
