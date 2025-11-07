@@ -192,8 +192,8 @@ class AuthService {
       return 'https://rentmekoraput.vercel.app';
     }
 
-    // Default localhost during development
-    return 'http://localhost:3000';
+    // Default localhost during development (match your setup)
+    return 'http://localhost:3002';
   }
 
   // Get user profile data
