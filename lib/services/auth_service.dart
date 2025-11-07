@@ -177,8 +177,13 @@ class AuthService {
 
   // Determine environment-aware redirect URL for password reset
   static String _computePasswordResetRedirectUrl() {
-    // On web, use current origin so it works for both localhost and Vercel
+    // On web:
+    // - In release (Vercel), always use the production domain
+    // - In debug (local dev), use current origin (includes the dev port)
     if (kIsWeb) {
+      if (kReleaseMode) {
+        return 'https://rentmekoraput.vercel.app';
+      }
       return Uri.base.origin;
     }
 
