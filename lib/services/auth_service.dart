@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../config/supabase_config.dart';
 
 class AuthService {
@@ -61,7 +62,11 @@ class AuthService {
   // Reset password
   static Future<void> resetPassword(String email) async {
     try {
-      await _auth.resetPasswordForEmail(email);
+      final redirectUrl = _computePasswordResetRedirectUrl();
+      await _auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectUrl,
+      );
     } catch (e) {
       rethrow;
     }
@@ -169,6 +174,22 @@ class AuthService {
 
   // Listen to auth state changes
   static Stream<AuthState> get authStateChanges => _auth.onAuthStateChange;
+
+  // Determine environment-aware redirect URL for password reset
+  static String _computePasswordResetRedirectUrl() {
+    // On web, use current origin so it works for both localhost and Vercel
+    if (kIsWeb) {
+      return Uri.base.origin;
+    }
+
+    // Fallbacks for non-web targets
+    if (kReleaseMode) {
+      return 'https://rentmekoraput.vercel.app';
+    }
+
+    // Default localhost during development
+    return 'http://localhost:3000';
+  }
 
   // Get user profile data
   static Map<String, dynamic>? get userMetadata => currentUser?.userMetadata;
