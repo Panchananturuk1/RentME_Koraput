@@ -31,17 +31,24 @@ window.PlacesBridge = {
     return new Promise(function(resolve, reject) {
       try {
         var container = document.createElement('div');
+        // Attach to DOM to improve reliability on some mobile browsers
+        document.body.appendChild(container);
         var svc = new google.maps.places.PlacesService(container);
         svc.getDetails({ placeId: placeId, fields: ['geometry','formatted_address','name'] }, function(res, status) {
-          if (status !== google.maps.places.PlacesServiceStatus.OK || !res) {
-            reject(status);
-            return;
+          try {
+            if (status !== google.maps.places.PlacesServiceStatus.OK || !res) {
+              reject(status);
+              return;
+            }
+            var loc = res.geometry && res.geometry.location;
+            var lat = loc ? loc.lat() : null;
+            var lng = loc ? loc.lng() : null;
+            var address = res.formatted_address || res.name || '';
+            resolve({ lat: lat, lng: lng, address: address });
+          } finally {
+            // Clean up the temporary container
+            try { document.body.removeChild(container); } catch (_) {}
           }
-          var loc = res.geometry && res.geometry.location;
-          var lat = loc ? loc.lat() : null;
-          var lng = loc ? loc.lng() : null;
-          var address = res.formatted_address || res.name || '';
-          resolve({ lat: lat, lng: lng, address: address });
         });
       } catch (e) { reject(e); }
     });
