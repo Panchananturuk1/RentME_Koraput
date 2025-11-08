@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class SupabaseConfig {
   static const String supabaseUrl = 'https://irafyvdazsfqyruyfagr.supabase.co';
@@ -8,7 +9,7 @@ class SupabaseConfig {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
-      debug: true, // Set to false in production
+      debug: !kReleaseMode,
     );
   }
 
