@@ -31,6 +31,10 @@
 
   <title>rentme_koraput</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Google Maps JavaScript API (Web) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDj8NpyRM6MepqWdWgOc03mYgIBeC5zZCk&libraries=places"></script>
+  <!-- Places bridge (uses JS API to avoid CORS on web) -->
+  <script src="places_bridge.js"></script>
   <script>
     // Unregister any previously installed service workers to prevent stale caching
     // when deploying to Vercel or other static hosts.

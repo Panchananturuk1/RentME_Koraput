@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Google Maps API key for iOS -->
+	<key>GMSApiKey</key>
+	<string>AIzaSyDj8NpyRM6MepqWdWgOc03mYgIBeC5zZCk</string>
+	<!-- Location usage description for current location feature -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to set pickup point and show nearby places.</string>
 </dict>
 </plist>
