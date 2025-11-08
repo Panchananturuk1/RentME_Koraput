@@ -183,18 +183,17 @@ class AuthService {
       return _envBaseUrl;
     }
     // On web:
-    // - In release (Vercel), always use the production domain
-    // - In debug (local dev), use current origin (includes the dev port)
+    // Use the current origin on web for both release and debug so redirects
+    // work on any deployed URL (Vercel preview/prod) and localhost.
     if (kIsWeb) {
-      if (kReleaseMode) {
-        return 'https://rentmekoraput.vercel.app';
-      }
       return Uri.base.origin;
     }
 
     // Fallbacks for non-web targets
+    // Prefer localhost during development; set production base URL if needed.
     if (kReleaseMode) {
-      return 'https://rentmekoraput.vercel.app';
+      // If you deploy to mobile/desktop with a custom domain, set it here.
+      return Uri.base.origin;
     }
 
     // Default localhost during development (match your setup)
