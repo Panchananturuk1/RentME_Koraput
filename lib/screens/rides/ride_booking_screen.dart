@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'dart:math' as math;
 import 'package:form_validator/form_validator.dart';
 import '../../services/ride_service.dart';
 import '../../models/ride_booking.dart';
 import '../../utils/ui_feedback.dart';
+import '../../services/places_service.dart';
 
 class RideBookingScreen extends StatefulWidget {
   const RideBookingScreen({super.key});
@@ -17,6 +21,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   final _pickupCtrl = TextEditingController();
   final _dropoffCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+  final PlacesService _places = PlacesService();
   DateTime? _pickupTime;
   int _seats = 1;
   bool _loading = false;
@@ -26,35 +31,197 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   double? _fareEstimate;
   String _rideMode = 'Daily'; // Daily, Rental, Outstation
 
+  // Google Maps state
+  GoogleMapController? _mapController;
+  Marker? _pickupMarker;
+  Marker? _dropoffMarker;
+  bool _placingPickup = true; // true => next tap places pickup, false => drop-off
+  final CameraPosition _initialCamera = const CameraPosition(
+    target: LatLng(18.8130, 82.7120), // Koraput approx
+    zoom: 12.5,
+  );
+
   @override
   void dispose() {
     _pickupCtrl.dispose();
     _dropoffCtrl.dispose();
     _notesCtrl.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
   void _updateEstimate() {
-    // Simple local estimate inspired by ride platforms
-    // Base fares by service type
+    // Base fares and per-km by service type
     final baseByType = {
       'Economy': 49.0,
       'Premium': 89.0,
       'SUV': 109.0,
     };
-    double base = baseByType[_serviceType] ?? 49.0;
-    // Seats multiplier
+    final perKmByType = {
+      'Economy': 14.0,
+      'Premium': 22.0,
+      'SUV': 28.0,
+    };
+    final base = baseByType[_serviceType] ?? 49.0;
+    final perKm = perKmByType[_serviceType] ?? 14.0;
+
+    // Seats and time multipliers
     final seatMultiplier = 1.0 + ((_seats - 1) * 0.2);
-    // Time-of-day multiplier (slightly higher evenings)
     final now = _pickupTime ?? DateTime.now();
     final hour = now.hour;
     final timeMultiplier = (hour >= 18 || hour <= 6) ? 1.15 : 1.0;
-    // A light distance factor proxy based on input lengths
-    final distProxy = ( _pickupCtrl.text.length + _dropoffCtrl.text.length ).clamp(10, 40) / 20.0;
-    final estimate = base * seatMultiplier * timeMultiplier * distProxy;
+
+    // Prefer real distance from map markers when both are set
+    double distanceKm;
+    if (_pickupMarker != null && _dropoffMarker != null) {
+      distanceKm = _haversineKm(_pickupMarker!.position, _dropoffMarker!.position);
+    } else {
+      // Proxy distance from text inputs when markers not set
+      final proxy = (_pickupCtrl.text.length + _dropoffCtrl.text.length).clamp(8, 40);
+      distanceKm = proxy / 4.0; // ~2–10 km
+    }
+
+    final estimate = (base + distanceKm * perKm) * seatMultiplier * timeMultiplier;
     setState(() {
-      _fareEstimate = double.parse(estimate.toStringAsFixed(2));
+      _fareEstimate = double.tryParse(estimate.toStringAsFixed(2));
     });
+  }
+
+  double _haversineKm(LatLng a, LatLng b) {
+    const r = 6371.0; // earth radius km
+    final dLat = _deg2rad(b.latitude - a.latitude);
+    final dLng = _deg2rad(b.longitude - a.longitude);
+    final lat1 = _deg2rad(a.latitude);
+    final lat2 = _deg2rad(b.latitude);
+    final h = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.sin(dLng / 2) * math.sin(dLng / 2) * math.cos(lat1) * math.cos(lat2);
+    final c = 2 * math.atan2(math.sqrt(h), math.sqrt(1 - h));
+    return r * c;
+  }
+
+  double _deg2rad(double deg) => deg * (math.pi / 180);
+
+  Future<Position?> _getCurrentPosition() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return null;
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return null;
+    }
+    if (permission == LocationPermission.deniedForever) return null;
+    try {
+      return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _applySelection(bool forPickup, LatLng latLng, String address) {
+    setState(() {
+      if (forPickup) {
+        _pickupCtrl.text = address;
+        _pickupMarker = Marker(
+          markerId: const MarkerId('pickup'),
+          position: latLng,
+          infoWindow: const InfoWindow(title: 'Pickup'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        );
+      } else {
+        _dropoffCtrl.text = address;
+        _dropoffMarker = Marker(
+          markerId: const MarkerId('dropoff'),
+          position: latLng,
+          infoWindow: const InfoWindow(title: 'Drop-off'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        );
+      }
+    });
+    _mapController?.animateCamera(CameraUpdate.newLatLng(latLng));
+    _updateEstimate();
+  }
+
+  Future<void> _openPlaceSearch({required bool forPickup}) async {
+    final qCtrl = TextEditingController();
+    final bias = _pickupMarker?.position ?? _dropoffMarker?.position;
+    Position? current;
+    String? currentAddr;
+
+    // Pre-fetch current location/address in the background
+    () async {
+      current = await _getCurrentPosition();
+      if (current != null) {
+        currentAddr = await _places.reverseGeocode(current!.latitude, current!.longitude);
+      }
+    }();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16.r))),
+      builder: (ctx) {
+        List<PlacePrediction> suggestions = [];
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) {
+              Future<void> _search(String q) async {
+                final results = await _places.autocomplete(q, location: bias);
+                suggestions = results;
+                setSheetState(() {});
+              }
+              return SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: 8.h),
+                    Container(height: 4, width: 48, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2.r))),
+                    Padding(
+                      padding: EdgeInsets.all(16.w),
+                      child: TextField(
+                        controller: qCtrl,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: forPickup ? 'Search pickup' : 'Search destination',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: qCtrl.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () { qCtrl.clear(); _search(''); }) : null,
+                        ),
+                        onChanged: _search,
+                      ),
+                    ),
+                    if (current != null)
+                      ListTile(
+                        leading: const Icon(Icons.my_location, color: Color(0xFF0EA5E9)),
+                        title: const Text('Use current location'),
+                        subtitle: Text(currentAddr ?? '${current!.latitude.toStringAsFixed(5)}, ${current!.longitude.toStringAsFixed(5)}'),
+                        onTap: () {
+                          final latLng = LatLng(current!.latitude, current!.longitude);
+                          _applySelection(forPickup, latLng, currentAddr ?? 'Current location');
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                    ...suggestions.map((p) => ListTile(
+                          leading: const Icon(Icons.place_outlined),
+                          title: Text(p.description),
+                          onTap: () async {
+                            final result = await _places.placeLatLngAndAddress(p.placeId);
+                            final latLng = result.$1;
+                            final addr = result.$2 ?? p.description;
+                            if (latLng != null) {
+                              _applySelection(forPickup, latLng, addr);
+                              Navigator.pop(ctx);
+                            }
+                          },
+                        )),
+                    SizedBox(height: 16.h),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _pickDateTime() async {
@@ -246,6 +413,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
               // Uber-style stacked inputs container
               _uberInputsCard(),
+              SizedBox(height: 12.h),
+              _mapSection(),
 
               SizedBox(height: 16.h),
               _notesField(),
@@ -413,7 +582,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       border: InputBorder.none,
                     ),
                     validator: ValidationBuilder().minLength(2).build(),
-                    onChanged: (_) => _updateEstimate(),
+                    readOnly: true,
+                    onTap: () => _openPlaceSearch(forPickup: true),
                   ),
                 ),
               ],
@@ -434,7 +604,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       border: InputBorder.none,
                     ),
                     validator: ValidationBuilder().minLength(2).build(),
-                    onChanged: (_) => _updateEstimate(),
+                    readOnly: true,
+                    onTap: () => _openPlaceSearch(forPickup: false),
                   ),
                 ),
                 Icon(Icons.send, color: const Color(0xFF111827)),
@@ -443,6 +614,67 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // Map section allowing tap-to-set pickup/drop-off
+  Widget _mapSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            ChoiceChip(
+              selected: _placingPickup,
+              label: const Text('Set pickup on map'),
+              onSelected: (_) => setState(() => _placingPickup = true),
+            ),
+            SizedBox(width: 8.w),
+            ChoiceChip(
+              selected: !_placingPickup,
+              label: const Text('Set drop-off on map'),
+              onSelected: (_) => setState(() => _placingPickup = false),
+            ),
+          ],
+        ),
+        SizedBox(height: 8.h),
+        SizedBox(
+          height: 320.h,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.r),
+            child: GoogleMap(
+              initialCameraPosition: _initialCamera,
+              zoomControlsEnabled: true,
+              myLocationEnabled: false,
+              markers: {
+                if (_pickupMarker != null) _pickupMarker!,
+                if (_dropoffMarker != null) _dropoffMarker!,
+              },
+              onMapCreated: (c) => _mapController = c,
+              onTap: (pos) {
+                setState(() {
+                  if (_placingPickup) {
+                    _pickupMarker = Marker(
+                      markerId: const MarkerId('pickup'),
+                      position: pos,
+                      infoWindow: const InfoWindow(title: 'Pickup'),
+                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                    );
+                  } else {
+                    _dropoffMarker = Marker(
+                      markerId: const MarkerId('dropoff'),
+                      position: pos,
+                      infoWindow: const InfoWindow(title: 'Drop-off'),
+                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                    );
+                  }
+                });
+                _updateEstimate();
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
