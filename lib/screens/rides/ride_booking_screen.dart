@@ -229,6 +229,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                                 _applySelection(forPickup, latLng, addr);
                                 // Defocus to prevent Chrome from re-focusing and re-opening the sheet
                                 FocusScope.of(context).unfocus();
+                                // Give the text field a beat to commit the text before closing
+                                await Future.delayed(const Duration(milliseconds: 60));
                                 Navigator.pop(ctx);
                               } else {
                                 ScaffoldMessenger.of(ctx).showSnackBar(
