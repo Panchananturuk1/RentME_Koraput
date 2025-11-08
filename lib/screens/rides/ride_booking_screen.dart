@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -46,7 +47,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     _pickupCtrl.dispose();
     _dropoffCtrl.dispose();
     _notesCtrl.dispose();
-    _mapController?.dispose();
+    if (!kIsWeb) {
+      _mapController?.dispose();
+    }
     super.dispose();
   }
 
