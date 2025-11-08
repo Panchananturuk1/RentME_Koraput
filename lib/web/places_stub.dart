@@ -7,6 +7,10 @@ Future<Map<String, dynamic>> webPlaceDetails(String placeId) async {
   throw UnsupportedError('webPlaceDetails is only available on web');
 }
 
+Future<Map<String, dynamic>> webGeocodePlaceId(String placeId) async {
+  throw UnsupportedError('webGeocodePlaceId is only available on web');
+}
+
 Future<String?> webReverseGeocode(double lat, double lng) async {
   throw UnsupportedError('webReverseGeocode is only available on web');
 }

@@ -46,6 +46,26 @@ window.PlacesBridge = {
       } catch (e) { reject(e); }
     });
   },
+  // Fallback using Geocoder by placeId, helpful when PlacesService.details fails.
+  geocodePlaceId: function(placeId) {
+    return new Promise(function(resolve, reject) {
+      try {
+        var geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ placeId: placeId }, function(results, status) {
+          if (status !== google.maps.GeocoderStatus.OK || !results || !results.length) {
+            reject(status);
+            return;
+          }
+          var r = results[0];
+          var loc = r.geometry && r.geometry.location;
+          var lat = loc ? loc.lat() : null;
+          var lng = loc ? loc.lng() : null;
+          var address = r.formatted_address || '';
+          resolve({ lat: lat, lng: lng, address: address });
+        });
+      } catch (e) { reject(e); }
+    });
+  },
   reverseGeocode: function(lat, lng) {
     return new Promise(function(resolve, reject) {
       try {

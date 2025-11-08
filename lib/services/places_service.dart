@@ -51,10 +51,18 @@ class PlacesService {
   Future<(LatLng?, String?)> placeLatLngAndAddress(String placeId) async {
     if (kIsWeb) {
       try {
+        // Try Places details first
         final res = await web.webPlaceDetails(placeId);
-        final lat = res['lat'] as num?;
-        final lng = res['lng'] as num?;
-        final addr = res['address'] as String?;
+        num? lat = res['lat'] as num?;
+        num? lng = res['lng'] as num?;
+        String? addr = res['address'] as String?;
+        if (lat == null || lng == null) {
+          // Fallback via Geocoder by placeId (more tolerant across devices)
+          final geo = await web.webGeocodePlaceId(placeId);
+          lat = geo['lat'] as num?;
+          lng = geo['lng'] as num?;
+          addr = addr ?? geo['address'] as String?;
+        }
         final latLng = (lat != null && lng != null) ? LatLng(lat.toDouble(), lng.toDouble()) : null;
         return (latLng, addr);
       } catch (_) {
