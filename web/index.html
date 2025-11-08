@@ -31,6 +31,17 @@
 
   <title>rentme_koraput</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    // Unregister any previously installed service workers to prevent stale caching
+    // when deploying to Vercel or other static hosts.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then(function(registrations) {
+          registrations.forEach(function(reg) { reg.unregister(); });
+        })
+        .catch(function(_) { /* ignore */ });
+    }
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
