@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:form_validator/form_validator.dart';
 import '../../providers/tent_provider.dart';
+import '../../utils/ui_feedback.dart';
 import '../../models/tent.dart';
 
 class CampingBookingScreen extends StatefulWidget {
@@ -133,9 +134,16 @@ class _CampingBookingScreenState extends State<CampingBookingScreen> {
                         : () async {
                             if (!_formKey.currentState!.validate()) return;
                             final id = await provider.createBooking();
-                            if (id != null && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Booking created: $id')),
+                            if (!mounted) return;
+                            if (id != null) {
+                              await UIFeedback.showSuccess(
+                                context,
+                                'Your tent booking has been created successfully.',
+                              );
+                            } else {
+                              await UIFeedback.showError(
+                                context,
+                                provider.error ?? 'Failed to create booking',
                               );
                             }
                           },

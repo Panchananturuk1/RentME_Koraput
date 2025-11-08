@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:form_validator/form_validator.dart';
 import '../../services/ride_service.dart';
 import '../../models/ride_booking.dart';
+import '../../utils/ui_feedback.dart';
 
 class RideBookingScreen extends StatefulWidget {
   const RideBookingScreen({super.key});
@@ -72,18 +73,26 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
       final id = await RideService.createRideBooking(booking);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ride booked: $id')),
-        );
-      }
+      if (!mounted) return;
+      await UIFeedback.showSuccess(
+        context,
+        'Your ride has been booked successfully.',
+      );
     } catch (e) {
       // Surface friendly message for common constraint violations
       final msg = e.toString();
       if (msg.contains('ride_pickup_in_future')) {
         setState(() => _error = 'Pickup time must be in the future. Please select a later time.');
+        await UIFeedback.showError(
+          context,
+          'Pickup time must be in the future. Please select a later time.',
+        );
       } else {
         setState(() => _error = msg);
+        await UIFeedback.showError(
+          context,
+          msg,
+        );
       }
     } finally {
       setState(() => _loading = false);

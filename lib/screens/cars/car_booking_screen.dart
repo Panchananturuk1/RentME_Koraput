@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:form_validator/form_validator.dart';
 import '../../providers/car_provider.dart';
 import '../../models/car.dart';
+import '../../utils/ui_feedback.dart';
 
 class CarBookingScreen extends StatefulWidget {
   const CarBookingScreen({super.key});
@@ -157,9 +158,16 @@ class _CarBookingScreenState extends State<CarBookingScreen> {
                         : () async {
                             if (!_formKey.currentState!.validate()) return;
                             final id = await provider.createBooking();
-                            if (id != null && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Car rental created: $id')),
+                            if (!mounted) return;
+                            if (id != null) {
+                              await UIFeedback.showSuccess(
+                                context,
+                                'Your car rental has been created successfully.',
+                              );
+                            } else {
+                              await UIFeedback.showError(
+                                context,
+                                provider.error ?? 'Failed to create rental',
                               );
                             }
                           },
