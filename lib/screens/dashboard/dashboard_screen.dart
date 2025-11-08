@@ -542,9 +542,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
               final bookings = snapshot.data ?? [];
-              if (bookings.isEmpty) {
-                return Center(child: const Text('No bookings yet'));
-              }
               return SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,72 +692,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     SizedBox(height: 16.h),
                     Text('Tent Stays', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
                     SizedBox(height: 8.h),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: bookings.length,
-                      separatorBuilder: (_, __) => SizedBox(height: 12.h),
-                      itemBuilder: (context, i) {
-                        final b = bookings[i];
-                        final tent = b['tents'] as Map<String, dynamic>?;
-                        final tentName = tent != null ? tent['name']?.toString() ?? 'Tent' : 'Tent';
-                        final start = DateTime.tryParse(b['start_date'].toString());
-                        final end = DateTime.tryParse(b['end_date'].toString());
-                        final nights = b['nights']?.toString() ?? '0';
-                        final qty = b['quantity']?.toString() ?? '1';
-                        final total = (b['total_price'] as num?)?.toDouble() ?? 0;
-                        final status = b['status']?.toString() ?? 'pending';
-                        return Container(
-                          padding: EdgeInsets.all(16.w),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    tentName,
-                                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-                                  ),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF3F4F6),
-                                      borderRadius: BorderRadius.circular(12.r),
+                    bookings.isEmpty
+                        ? const Text('No tent stays')
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: bookings.length,
+                            separatorBuilder: (_, __) => SizedBox(height: 12.h),
+                            itemBuilder: (context, i) {
+                              final b = bookings[i];
+                              final tent = b['tents'] as Map<String, dynamic>?;
+                              final tentName = tent != null ? tent['name']?.toString() ?? 'Tent' : 'Tent';
+                              final start = DateTime.tryParse(b['start_date'].toString());
+                              final end = DateTime.tryParse(b['end_date'].toString());
+                              final nights = b['nights']?.toString() ?? '0';
+                              final qty = b['quantity']?.toString() ?? '1';
+                              final total = (b['total_price'] as num?)?.toDouble() ?? 0;
+                              final status = b['status']?.toString() ?? 'pending';
+                              return Container(
+                                padding: EdgeInsets.all(16.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
                                     ),
-                                    child: Text(status),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 8.h),
-                              Text(
-                                '${start != null ? start.toIso8601String().substring(0,10) : '?'} → ${end != null ? end.toIso8601String().substring(0,10) : '?'}',
-                                style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)),
-                              ),
-                              SizedBox(height: 8.h),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Nights: $nights · Qty: $qty'),
-                                  Text('₹${total.toStringAsFixed(2)}'),
-                                ],
-                              ),
-                            ],
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          tentName,
+                                          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                                        ),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF3F4F6),
+                                            borderRadius: BorderRadius.circular(12.r),
+                                          ),
+                                          child: Text(status),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    Text(
+                                      '${start != null ? start.toIso8601String().substring(0,10) : '?'} → ${end != null ? end.toIso8601String().substring(0,10) : '?'}',
+                                      style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)),
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('Nights: $nights · Qty: $qty'),
+                                        Text('₹${total.toStringAsFixed(2)}'),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
                   ],
                 ),
               );
