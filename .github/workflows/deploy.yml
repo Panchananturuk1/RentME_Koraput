@@ -27,7 +27,7 @@ jobs:
       run: flutter pub get
       
     - name: Build web app
-      run: flutter build web --release --base-href / --dart-define=APP_BASE_URL=https://rentmekoraput.vercel.app
+      run: flutter build web --release --base-href /
       
     - name: Deploy to Vercel
       uses: amondnet/vercel-action@v25
