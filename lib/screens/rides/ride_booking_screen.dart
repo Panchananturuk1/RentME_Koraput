@@ -160,71 +160,102 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
     await showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16.r))),
       builder: (ctx) {
         List<PlacePrediction> suggestions = [];
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: StatefulBuilder(
-            builder: (ctx, setSheetState) {
-              Future<void> _search(String q) async {
-                final results = await _places.autocomplete(q, location: bias);
-                suggestions = results;
-                setSheetState(() {});
-              }
-              return SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(height: 8.h),
-                    Container(height: 4, width: 48, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2.r))),
-                    Padding(
-                      padding: EdgeInsets.all(16.w),
-                      child: TextField(
-                        controller: qCtrl,
-                        autofocus: true,
-                        decoration: InputDecoration(
-                          hintText: forPickup ? 'Search pickup' : 'Search destination',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: qCtrl.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () { qCtrl.clear(); _search(''); }) : null,
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.75,
+            minChildSize: 0.4,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (ctx2, scrollController) {
+              return StatefulBuilder(
+                builder: (ctx3, setSheetState) {
+                  Future<void> _search(String q) async {
+                    final results = await _places.autocomplete(q, location: bias);
+                    suggestions = results;
+                    setSheetState(() {});
+                  }
+                  return SafeArea(
+                    child: Column(
+                      children: [
+                        SizedBox(height: 8.h),
+                        Container(height: 4, width: 48, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2.r))),
+                        Padding(
+                          padding: EdgeInsets.all(16.w),
+                          child: TextField(
+                            controller: qCtrl,
+                            autofocus: true,
+                            textInputAction: TextInputAction.search,
+                            decoration: InputDecoration(
+                              hintText: forPickup ? 'Search pickup' : 'Search destination',
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon: qCtrl.text.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () { qCtrl.clear(); _search(''); }) : null,
+                            ),
+                            onChanged: _search,
+                            onSubmitted: _search,
+                          ),
                         ),
-                        onChanged: _search,
-                      ),
-                    ),
-                    if (current != null)
-                      ListTile(
-                        leading: const Icon(Icons.my_location, color: Color(0xFF0EA5E9)),
-                        title: const Text('Use current location'),
-                        subtitle: Text(currentAddr ?? '${current!.latitude.toStringAsFixed(5)}, ${current!.longitude.toStringAsFixed(5)}'),
-                        onTap: () {
-                          final latLng = LatLng(current!.latitude, current!.longitude);
-                          _applySelection(forPickup, latLng, currentAddr ?? 'Current location');
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                    ...suggestions.map((p) => ListTile(
-                          leading: const Icon(Icons.place_outlined),
-                          title: Text(p.description),
-                          onTap: () async {
-                            final result = await _places.placeLatLngAndAddress(p.placeId);
-                            final latLng = result.$1;
-                            final addr = result.$2 ?? p.description;
-                            if (latLng != null) {
-                              _applySelection(forPickup, latLng, addr);
+                        if (current != null)
+                          ListTile(
+                            leading: const Icon(Icons.my_location, color: Color(0xFF0EA5E9)),
+                            title: const Text('Use current location'),
+                            subtitle: Text(currentAddr ?? '${current!.latitude.toStringAsFixed(5)}, ${current!.longitude.toStringAsFixed(5)}'),
+                            onTap: () {
+                              final latLng = LatLng(current!.latitude, current!.longitude);
+                              _applySelection(forPickup, latLng, currentAddr ?? 'Current location');
                               Navigator.pop(ctx);
-                            }
-                          },
-                        )),
-                    SizedBox(height: 16.h),
-                  ],
-                ),
+                            },
+                          ),
+                        Expanded(
+                          child: ListView.builder(
+                            controller: scrollController,
+                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                            itemCount: suggestions.length,
+                            itemBuilder: (context, index) {
+                              final p = suggestions[index];
+                              return ListTile(
+                                leading: const Icon(Icons.place_outlined),
+                                title: Text(p.description),
+                                onTap: () async {
+                              final result = await _places.placeLatLngAndAddress(p.placeId);
+                              final latLng = result.$1;
+                              final addr = result.$2 ?? p.description;
+                              if (latLng != null) {
+                                _applySelection(forPickup, latLng, addr);
+                                // Defocus to prevent Chrome from re-focusing and re-opening the sheet
+                                FocusScope.of(context).unfocus();
+                                Navigator.pop(ctx);
+                              } else {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Unable to fetch place details. Please check your Google Maps key restrictions for this origin.'),
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                            },
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
         );
       },
     );
+    // Cleanup controller
+    qCtrl.dispose();
   }
 
   Future<void> _pickDateTime() async {
