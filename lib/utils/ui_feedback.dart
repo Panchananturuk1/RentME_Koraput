@@ -29,39 +29,47 @@ class UIFeedback {
     required IconData icon,
     required Color color,
   }) async {
-    try {
-      // On Flutter web, ensure the dialog uses the root navigator for reliability.
-      return await showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        useRootNavigator: true,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Row(
+    // Use a SnackBar in web release builds to guarantee visibility on Vercel.
+    if (kIsWeb && kReleaseMode) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
             children: [
               Icon(icon, color: color),
               const SizedBox(width: 8),
-              Expanded(child: Text(title)),
+              Expanded(child: Text('$title: $message')),
             ],
           ),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('OK'),
-            ),
-          ],
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
         ),
       );
-    } catch (_) {
-      // Fallback in case the dialog fails to render on web.
-      if (kIsWeb) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      } else {
-        rethrow;
-      }
+      return;
     }
+
+    // Otherwise, show a modal dialog (works in mobile and local web dev).
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      useRootNavigator: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title)),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
