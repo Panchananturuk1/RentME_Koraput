@@ -69,7 +69,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Expanded(
               child: _selectedIndex == 2
                   ? _buildBookingsTab()
-                  : SingleChildScrollView(
+                  : _selectedIndex == 3
+                      ? _buildProfileTab()
+                      : SingleChildScrollView(
                       padding: EdgeInsets.symmetric(horizontal: 20.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -764,6 +766,138 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               );
             },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProfileTab() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+      child: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (!auth.isLoggedIn) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.lock_outline, size: 48, color: Color(0xFF9CA3AF)),
+                  SizedBox(height: 12.h),
+                  const Text('Sign in to view your profile'),
+                  SizedBox(height: 12.h),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pushNamed('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final name = auth.userDisplayName;
+          final email = auth.userEmail ?? '—';
+          final phone = auth.userPhoneNumber ?? '—';
+          final emailVerified = auth.isEmailVerified;
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(20.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 56.w,
+                        height: 56.w,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0EA5E9).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(28.r),
+                        ),
+                        child: Icon(Icons.person, color: const Color(0xFF0EA5E9), size: 28.sp),
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937)),
+                            ),
+                            SizedBox(height: 4.h),
+                            Row(
+                              children: [
+                                Icon(Icons.verified_user, size: 14.sp, color: emailVerified ? const Color(0xFF10B981) : const Color(0xFFF59E0B)),
+                                SizedBox(width: 6.w),
+                                Text(emailVerified ? 'Email Verified' : 'Email Not Verified', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280))),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 16.h),
+
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.badge, color: Color(0xFF0EA5E9)),
+                        title: const Text('Name'),
+                        subtitle: Text(name),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const Divider(height: 16),
+                      ListTile(
+                        leading: const Icon(Icons.email_outlined, color: Color(0xFF0EA5E9)),
+                        title: const Text('Email'),
+                        subtitle: Text(email),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const Divider(height: 16),
+                      ListTile(
+                        leading: const Icon(Icons.phone_outlined, color: Color(0xFF0EA5E9)),
+                        title: const Text('Mobile Number'),
+                        subtitle: Text(phone),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 100.h),
+              ],
+            ),
           );
         },
       ),

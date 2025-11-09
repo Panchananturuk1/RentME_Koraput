@@ -59,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            padding: EdgeInsets.only(left: 24.w, right: 24.w, bottom: 32.h),
             child: Column(
               children: [
                 SizedBox(height: 40.h),
