@@ -348,7 +348,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Login Button
               SizedBox(
                 width: double.infinity,
-                height: 50.h,
+                height: 60.h,
                 child: ElevatedButton(
                   onPressed: authProvider.isLoading ? null : _handleLogin,
                   child: authProvider.isLoading

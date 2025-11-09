@@ -432,7 +432,7 @@ class _SignupScreenState extends State<SignupScreen> {
               // Signup Button
               SizedBox(
                 width: double.infinity,
-                height: 50.h,
+                height: 60.h,
                 child: ElevatedButton(
                   onPressed: authProvider.isLoading ? null : _handleSignup,
                   child: authProvider.isLoading
