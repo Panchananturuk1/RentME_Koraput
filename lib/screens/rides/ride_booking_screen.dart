@@ -34,7 +34,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   bool _suggestingPickup = true;
   Timer? _debounce;
 
-  String _serviceType = 'Economy'; // Economy, Premium, SUV
+  String _serviceType = 'Car'; // Auto, Bike, Car, SUV
   double? _fareEstimate;
   String _rideMode = 'Daily'; // Daily, Rental, Outstation
 
@@ -65,13 +65,15 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   void _updateEstimate() {
     // Base fares and per-km by service type
     final baseByType = {
-      'Economy': 49.0,
-      'Premium': 89.0,
+      'Auto': 39.0,
+      'Bike': 29.0,
+      'Car': 49.0,
       'SUV': 109.0,
     };
     final perKmByType = {
-      'Economy': 14.0,
-      'Premium': 22.0,
+      'Auto': 11.0,
+      'Bike': 9.0,
+      'Car': 14.0,
       'SUV': 28.0,
     };
     final base = baseByType[_serviceType] ?? 49.0;
@@ -469,44 +471,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           child: ListView(
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
             children: [
-              // Uber-style hero heading
-              Text(
-                'Go with RentMe',
-                style: TextStyle(
-                  fontSize: 28.sp,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF111827),
-                ),
-              ),
-              SizedBox(height: 12.h),
-              Text(
-                'Find a ride for every road with access across Koraput.',
-                style: TextStyle(fontSize: 14.sp, color: const Color(0xFF4B5563)),
-              ),
-              SizedBox(height: 6.h),
-              Text(
-                'Because the best adventures come to you.',
-                style: TextStyle(fontSize: 14.sp, color: const Color(0xFF4B5563)),
-              ),
-
+              // Ride type selector (Auto, Bike, Car, SUV)
+              _rideTypeTopSelector(),
               SizedBox(height: 16.h),
 
               // Uber-style stacked inputs container
               _uberInputsCard(),
               _suggestionsPanel(),
               SizedBox(height: 12.h),
-              _mapSection(),
-
-              SizedBox(height: 16.h),
               _notesField(),
-
-              if (_error != null) ...[
-                SizedBox(height: 12.h),
-                Text(_error!, style: const TextStyle(color: Colors.red)),
-              ],
-
-              SizedBox(height: 24.h),
-
+              SizedBox(height: 12.h),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -522,12 +496,17 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       : const Text('Book Ride'),
                 ),
               ),
-
               SizedBox(height: 12.h),
-              TextButton(
-                onPressed: () {},
-                child: const Text('Download the RentMe app'),
-              ),
+              _mapSection(),
+
+              SizedBox(height: 16.h),
+
+              if (_error != null) ...[
+                SizedBox(height: 12.h),
+                Text(_error!, style: const TextStyle(color: Colors.red)),
+              ],
+
+              SizedBox(height: 24.h),
 
               SizedBox(height: 40.h),
               _advancedControlsSection(),
@@ -564,6 +543,37 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _rideTypeTopSelector() {
+    final typeIcons = <(String, IconData)>[
+      ('Auto', Icons.local_taxi),
+      ('Bike', Icons.two_wheeler),
+      ('Car', Icons.directions_car),
+      ('SUV', Icons.airport_shuttle),
+    ];
+    return Card(
+      elevation: 0,
+      color: const Color(0xFFF3F4F6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: EdgeInsets.all(12.w),
+        child: Wrap(
+          spacing: 8.w,
+          runSpacing: 8.h,
+          children: typeIcons.map((t) {
+            final selected = _serviceType == t.$1;
+            return ChoiceChip(
+              avatar: Icon(t.$2, size: 18.sp, color: selected ? const Color(0xFF111827) : const Color(0xFF6B7280)),
+              selected: selected,
+              label: Text(t.$1),
+              selectedColor: const Color(0xFF0EA5E9).withOpacity(0.15),
+              onSelected: (_) { setState(() { _serviceType = t.$1; }); _updateEstimate(); },
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -730,22 +740,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            ChoiceChip(
-              selected: _placingPickup,
-              label: const Text('Set pickup on map'),
-              onSelected: (_) => setState(() => _placingPickup = true),
-            ),
-            SizedBox(width: 8.w),
-            ChoiceChip(
-              selected: !_placingPickup,
-              label: const Text('Set drop-off on map'),
-              onSelected: (_) => setState(() => _placingPickup = false),
-            ),
-          ],
-        ),
-        SizedBox(height: 8.h),
+        // Taps set marker based on which field is focused, or which marker is missing
         SizedBox(
           height: 320.h,
           child: ClipRRect(
@@ -760,8 +755,20 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               },
               onMapCreated: (c) => _mapController = c,
               onTap: (pos) {
+                final bool forPickup;
+                if (_pickupFocus.hasFocus) {
+                  forPickup = true;
+                } else if (_dropoffFocus.hasFocus) {
+                  forPickup = false;
+                } else if (_pickupMarker == null) {
+                  forPickup = true;
+                } else if (_dropoffMarker == null) {
+                  forPickup = false;
+                } else {
+                  forPickup = _placingPickup; // fallback to previous mode
+                }
                 setState(() {
-                  if (_placingPickup) {
+                  if (forPickup) {
                     _pickupMarker = Marker(
                       markerId: const MarkerId('pickup'),
                       position: pos,
@@ -795,7 +802,6 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         SizedBox(height: 12.h),
         _timeAndSeats(),
         SizedBox(height: 16.h),
-        _serviceTypeSelector(),
       ],
     );
   }
@@ -904,10 +910,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
       child: Padding(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(12.w),
         child: TextFormField(
           controller: _notesCtrl,
-          maxLines: 3,
+          minLines: 2,
+          maxLines: 2,
           decoration: const InputDecoration(
             labelText: 'Notes (optional)',
             hintText: 'Any special instructions for the driver',
