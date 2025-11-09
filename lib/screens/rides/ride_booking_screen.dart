@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
+import 'dart:async';
 import 'package:form_validator/form_validator.dart';
 import '../../services/ride_service.dart';
 import '../../models/ride_booking.dart';
@@ -22,11 +23,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   final _pickupCtrl = TextEditingController();
   final _dropoffCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+  final FocusNode _pickupFocus = FocusNode();
+  final FocusNode _dropoffFocus = FocusNode();
   final PlacesService _places = PlacesService();
   DateTime? _pickupTime;
   int _seats = 1;
   bool _loading = false;
   String? _error;
+  List<PlacePrediction> _suggestions = [];
+  bool _suggestingPickup = true;
+  Timer? _debounce;
 
   String _serviceType = 'Economy'; // Economy, Premium, SUV
   double? _fareEstimate;
@@ -47,6 +53,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     _pickupCtrl.dispose();
     _dropoffCtrl.dispose();
     _notesCtrl.dispose();
+    _pickupFocus.dispose();
+    _dropoffFocus.dispose();
+    _debounce?.cancel();
     if (!kIsWeb) {
       _mapController?.dispose();
     }
@@ -142,6 +151,41 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     });
     _mapController?.animateCamera(CameraUpdate.newLatLng(latLng));
     _updateEstimate();
+  }
+
+  void _onQueryChanged(bool forPickup, String q) {
+    _suggestingPickup = forPickup;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 180), () async {
+      final query = q.trim();
+      if (query.length < 2) {
+        setState(() => _suggestions = []);
+        return;
+      }
+      final bias = _pickupMarker?.position ?? _dropoffMarker?.position;
+      final results = await _places.autocomplete(query, location: bias);
+      setState(() => _suggestions = results);
+    });
+  }
+
+  Future<void> _selectPrediction(bool forPickup, PlacePrediction p) async {
+    final result = await _places.placeLatLngAndAddress(p.placeId);
+    final latLng = result.$1;
+    final addr = result.$2 ?? p.description;
+    if (latLng != null) {
+      _applySelection(forPickup, latLng, addr);
+      setState(() => _suggestions = []);
+      if (forPickup) {
+        FocusScope.of(context).requestFocus(_dropoffFocus);
+      } else {
+        FocusScope.of(context).unfocus();
+      }
+    } else {
+      await UIFeedback.showError(
+        context,
+        'Unable to fetch place details for this origin.',
+      );
+    }
   }
 
   Future<void> _openPlaceSearch({required bool forPickup}) async {
@@ -449,6 +493,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
               // Uber-style stacked inputs container
               _uberInputsCard(),
+              _suggestionsPanel(),
               SizedBox(height: 12.h),
               _mapSection(),
 
@@ -613,13 +658,14 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _pickupCtrl,
+                    focusNode: _pickupFocus,
                     decoration: const InputDecoration(
                       hintText: 'Enter location',
                       border: InputBorder.none,
                     ),
                     validator: ValidationBuilder().minLength(2).build(),
-                    readOnly: true,
-                    onTap: () => _openPlaceSearch(forPickup: true),
+                    onTap: () => setState(() => _suggestingPickup = true),
+                    onChanged: (v) { _onQueryChanged(true, v); _updateEstimate(); },
                   ),
                 ),
               ],
@@ -635,13 +681,14 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _dropoffCtrl,
+                    focusNode: _dropoffFocus,
                     decoration: const InputDecoration(
                       hintText: 'Enter destination',
                       border: InputBorder.none,
                     ),
                     validator: ValidationBuilder().minLength(2).build(),
-                    readOnly: true,
-                    onTap: () => _openPlaceSearch(forPickup: false),
+                    onTap: () => setState(() => _suggestingPickup = false),
+                    onChanged: (v) { _onQueryChanged(false, v); _updateEstimate(); },
                   ),
                 ),
                 Icon(Icons.send, color: const Color(0xFF111827)),
@@ -649,6 +696,31 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _suggestionsPanel() {
+    if (_suggestions.isEmpty) return const SizedBox.shrink();
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.only(top: 8.h),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: 280.h),
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: _suggestions.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (ctx, i) {
+            final p = _suggestions[i];
+            return ListTile(
+              leading: const Icon(Icons.place_outlined),
+              title: Text(p.description, maxLines: 1, overflow: TextOverflow.ellipsis),
+              onTap: () => _selectPrediction(_suggestingPickup, p),
+            );
+          },
+        ),
       ),
     );
   }
