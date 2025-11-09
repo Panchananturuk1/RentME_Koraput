@@ -33,6 +33,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   List<PlacePrediction> _suggestions = [];
   bool _suggestingPickup = true;
   Timer? _debounce;
+  // Version token to prevent stale autocomplete results from re-populating suggestions
+  int _suggestionsVersion = 0;
 
   String _serviceType = 'Car'; // Auto, Bike, Car, SUV
   double? _fareEstimate;
@@ -158,15 +160,23 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   void _onQueryChanged(bool forPickup, String q) {
     _suggestingPickup = forPickup;
     _debounce?.cancel();
+    // Increment version to mark this as the latest query
+    final int version = ++_suggestionsVersion;
     _debounce = Timer(const Duration(milliseconds: 180), () async {
       final query = q.trim();
       if (query.length < 2) {
-        setState(() => _suggestions = []);
+        // Only clear suggestions if this is still the latest query
+        if (version == _suggestionsVersion) {
+          setState(() => _suggestions = []);
+        }
         return;
       }
       final bias = _pickupMarker?.position ?? _dropoffMarker?.position;
       final results = await _places.autocomplete(query, location: bias);
-      setState(() => _suggestions = results);
+      // Ignore stale results from older queries
+      if (version == _suggestionsVersion) {
+        setState(() => _suggestions = results);
+      }
     });
   }
 
@@ -176,6 +186,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     final addr = result.$2 ?? p.description;
     if (latLng != null) {
       _applySelection(forPickup, latLng, addr);
+      // Bump version to invalidate any in-flight autocomplete results
+      _suggestionsVersion++;
       setState(() => _suggestions = []);
       if (forPickup) {
         FocusScope.of(context).requestFocus(_dropoffFocus);
