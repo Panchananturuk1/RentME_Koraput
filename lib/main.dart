@@ -13,6 +13,8 @@ import 'providers/tent_provider.dart';
 import 'screens/camping/camping_booking_screen.dart';
 import 'providers/car_provider.dart';
 import 'screens/cars/car_booking_screen.dart';
+import 'providers/package_provider.dart';
+import 'screens/packages/package_booking_screen.dart';
 import 'screens/rides/ride_booking_screen.dart';
 
 void main() async {
@@ -39,6 +41,7 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => AuthProvider()),
             ChangeNotifierProvider(create: (_) => TentProvider()),
             ChangeNotifierProvider(create: (_) => CarProvider()),
+            ChangeNotifierProvider(create: (_) => PackageProvider()),
           ],
           child: MaterialApp(
             title: 'RentMe Koraput',
@@ -96,12 +99,14 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(builder: (context) => const ForgotPasswordScreen());
                 case '/reset-password':
                   return MaterialPageRoute(builder: (context) => const ResetPasswordScreen());
-              case '/dashboard':
-                return MaterialPageRoute(builder: (context) => const DashboardScreen());
+              case '/cars':
+                  return MaterialPageRoute(builder: (context) => const CarBookingScreen());
+                case '/packages':
+                  return MaterialPageRoute(builder: (context) => const PackageBookingScreen());
+                case '/dashboard':
+                  return MaterialPageRoute(builder: (context) => const DashboardScreen());
               case '/camping':
                 return MaterialPageRoute(builder: (context) => const CampingBookingScreen());
-              case '/cars':
-                return MaterialPageRoute(builder: (context) => const CarBookingScreen());
               case '/ride':
                 return MaterialPageRoute(builder: (context) => const RideBookingScreen());
               default:
