@@ -4,11 +4,11 @@ A modern Flutter web application for rental property management in Koraput. This
 
 ## 🌐 Live Demo
 
-**Production URL:** [https://rentme-koraput-9tgduy9ez-panchanans-projects.vercel.app](https://rentme-koraput-9tgduy9ez-panchanans-projects.vercel.app)
+**Production URL:** [https://rentme-mykoraput.web.app](https://rentme-mykoraput.web.app)
 
 ## ✨ Features
 
-- **User Authentication**: Secure login and registration system powered by Supabase
+- **User Authentication**: Secure login and registration system powered by Firebase
 - **Property Listings**: Browse and manage rental properties
 - **Responsive Design**: Optimized for web, mobile, and tablet devices
 - **Modern UI**: Clean and intuitive user interface
@@ -19,7 +19,7 @@ A modern Flutter web application for rental property management in Koraput. This
 ## 🛠️ Tech Stack
 
 - **Frontend**: Flutter Web
-- **Backend**: Supabase (Authentication & Database)
+- **Backend**: Firebase (Authentication & Cloud Firestore)
 - **State Management**: Provider
 - **HTTP Client**: HTTP package
 - **UI Components**: Material Design with custom styling
@@ -53,11 +53,11 @@ cd rentme_koraput
 flutter pub get
 ```
 
-### 3. Configure Supabase
+### 3. Configure Firebase
 
-1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Update the configuration in `lib/config/supabase_config.dart`
-3. Add your Supabase URL and API key
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Update the configuration in `lib/config/firebase_config.dart`
+3. Add your Firebase web configuration options
 
 ### 4. Run the Application
 
@@ -78,7 +78,7 @@ flutter build web --release
 ```
 lib/
 ├── config/
-│   └── supabase_config.dart    # Supabase configuration
+│   └── firebase_config.dart    # Firebase configuration
 ├── providers/
 │   └── auth_provider.dart      # Authentication state management
 ├── screens/
@@ -130,7 +130,9 @@ vercel deploy build/web --prod
 ## 📦 Dependencies
 
 ### Main Dependencies
-- `supabase_flutter: ^2.5.6` - Backend services
+- `firebase_core: ^3.10.1` - Core Firebase SDK
+- `firebase_auth: ^5.4.1` - Authentication services
+- `cloud_firestore: ^5.6.2` - NoSQL database
 - `provider: ^6.1.1` - State management
 - `http: ^1.1.0` - HTTP client
 - `flutter_screenutil: ^5.9.0` - Responsive design
@@ -162,6 +164,6 @@ For support and questions, please contact the development team or create an issu
 ## 🔗 Useful Links
 
 - [Flutter Documentation](https://docs.flutter.dev/)
-- [Supabase Documentation](https://supabase.com/docs)
+- [Firebase Documentation](https://firebase.google.com/docs)
 - [Vercel Documentation](https://vercel.com/docs)
 - [Provider Package](https://pub.dev/packages/provider)
