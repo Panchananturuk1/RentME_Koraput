@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/tent.dart';
 import '../models/tent_booking.dart';
 import '../services/tent_service.dart';
-import '../config/supabase_config.dart';
+import '../services/auth_service.dart';
 
 class TentProvider extends ChangeNotifier {
   final List<Tent> _tents = [];
@@ -76,7 +75,7 @@ class TentProvider extends ChangeNotifier {
       return null;
     }
 
-    final user = SupabaseConfig.auth.currentUser;
+    final user = AuthService.currentUser;
     if (user == null) {
       _error = 'Please sign in to book';
       notifyListeners();
@@ -90,7 +89,7 @@ class TentProvider extends ChangeNotifier {
     try {
       final booking = TentBooking(
         id: 'temp',
-        userId: user.id,
+        userId: user.uid,
         tentId: _selectedTent!.id,
         startDate: _startDate!,
         endDate: _endDate!,
