@@ -44,3 +44,13 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .vercel
+
+# Environment variables and secrets
+.env
+.env.*
+env/
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+lib/config/firebase_config.dart
+lib/config/maps_config.dart

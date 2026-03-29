@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../services/tent_service.dart';
 import '../../services/car_service.dart';
 import '../../services/ride_service.dart';
+import '../../services/package_service.dart';
+import '../../models/package_booking.dart';
 import '../../providers/auth_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -52,6 +54,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       color: const Color(0xFFF59E0B),
       available: true,
       rating: 4.6,
+    ),
+    ServiceItem(
+      id: 'packages',
+      title: 'Tour Packages',
+      subtitle: 'All-in-one travel experiences',
+      icon: Icons.travel_explore,
+      color: const Color(0xFFEC4899),
+      available: true,
+      rating: 5.0,
     ),
   ];
 
@@ -398,6 +409,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Navigator.of(context).pushNamed('/cars');
         } else if (service.id == 'rides') {
           Navigator.of(context).pushNamed('/ride');
+        } else if (service.id == 'packages') {
+          Navigator.of(context).pushNamed('/packages');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('${service.title} coming soon')),
@@ -682,6 +695,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                                     decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(8.r)),
                                     child: Text(status.toUpperCase(), style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+
+                    SizedBox(height: 16.h),
+                    Text('Tour Packages', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
+                    SizedBox(height: 8.h),
+                    FutureBuilder<List<PackageBooking>>(
+                      future: PackageService.fetchUserBookings(),
+                      builder: (context, packageSnap) {
+                        if (packageSnap.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (packageSnap.hasError) {
+                          return Center(child: Text('Error: ${packageSnap.error}'));
+                        }
+                        final packages = packageSnap.data ?? [];
+                        if (packages.isEmpty) {
+                          return const Text('No tour packages booked');
+                        }
+                        return Column(
+                          children: packages.map((booking) {
+                            return Container(
+                              margin: EdgeInsets.only(bottom: 12.h),
+                              padding: EdgeInsets.all(16.w),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          booking.packageName,
+                                          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF3F4F6),
+                                          borderRadius: BorderRadius.circular(12.r),
+                                        ),
+                                        child: Text(
+                                          booking.status.toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: booking.status == 'confirmed' ? Colors.green : Colors.orange,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.calendar_today, size: 16.sp, color: const Color(0xFF6B7280)),
+                                      SizedBox(width: 6.w),
+                                      Text(
+                                        'Travel Date: ${booking.travelDate.toIso8601String().substring(0, 10)}',
+                                        style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280)),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 6.h),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(Icons.people, size: 16.sp, color: const Color(0xFF6B7280)),
+                                          SizedBox(width: 6.w),
+                                          Text('${booking.numberOfPersons} Person(s)', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6B7280))),
+                                        ],
+                                      ),
+                                      Text(
+                                        '₹${booking.totalPrice.toStringAsFixed(2)}',
+                                        style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937)),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

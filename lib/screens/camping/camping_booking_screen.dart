@@ -5,6 +5,8 @@ import '../../providers/tent_provider.dart';
 import '../../utils/ui_feedback.dart';
 import '../../models/tent.dart';
 
+import '../../services/tent_service.dart';
+
 class CampingBookingScreen extends StatefulWidget {
   const CampingBookingScreen({super.key});
 
@@ -53,6 +55,34 @@ class _CampingBookingScreenState extends State<CampingBookingScreen> {
           builder: (context, provider, _) {
             if (provider.loading && provider.tents.isEmpty) {
               return const Center(child: CircularProgressIndicator());
+            }
+
+            if (provider.tents.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('No tents available.', style: TextStyle(fontSize: 16)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () async {
+                        try {
+                          await TentService.seedTents();
+                          if (context.mounted) {
+                            Provider.of<TentProvider>(context, listen: false).loadTents();
+                            UIFeedback.showSuccess(context, 'Data initialized successfully!');
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            UIFeedback.showError(context, 'Failed to initialize: $e');
+                          }
+                        }
+                      },
+                      child: const Text('Initialize Sample Data'),
+                    ),
+                  ],
+                ),
+              );
             }
 
             return Form(

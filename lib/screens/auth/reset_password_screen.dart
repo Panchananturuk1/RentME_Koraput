@@ -5,15 +5,11 @@ import 'package:form_validator/form_validator.dart';
 import '../../providers/auth_provider.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  final String? refreshToken;
   final String? resetCode;
-  final String? tokenHash;
   
   const ResetPasswordScreen({
     super.key,
-    this.refreshToken,
     this.resetCode,
-    this.tokenHash,
   });
 
   @override
@@ -46,44 +42,33 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
       try {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        bool success = false;
         
         if (_isCodeBasedReset) {
-          // Check if user is already authenticated (which happens with password reset links)
-          print('🔐 ResetPasswordScreen: Starting code-based reset');
+          // Firebase password reset using oobCode (resetCode)
+          print('🔐 ResetPasswordScreen: Starting Firebase code-based reset');
           print('Code: ${widget.resetCode}');
-          print('TokenHash: ${widget.tokenHash}');
-          print('Current user: ${authProvider.user?.email}');
           
-          if (authProvider.isLoggedIn) {
-            print('✅ User is already authenticated, updating password directly');
-            
-            final success = await authProvider.updatePasswordForAuthenticatedUser(
-              _passwordController.text.trim(),
-            );
-            
-            print('🎯 ResetPasswordScreen: Password update result: $success');
-            
-            if (!success) {
-              throw Exception('Failed to update password');
-            }
-          } else {
-            print('❌ User not authenticated, cannot update password');
-            throw Exception('User must be authenticated to update password');
-          }
+          success = await authProvider.confirmPasswordReset(
+            code: widget.resetCode!,
+            newPassword: _passwordController.text.trim(),
+          );
+        } else if (authProvider.isLoggedIn) {
+          // Logged in user changing their password
+          print('✅ User is already authenticated, updating password directly');
+          
+          success = await authProvider.updatePasswordForAuthenticatedUser(
+            _passwordController.text.trim(),
+          );
         } else {
-          // Token-based reset flow
-          if (widget.refreshToken != null) {
-            final sessionSet = await authProvider.setSession(
-              refreshToken: widget.refreshToken!,
-            );
-            
-            if (!sessionSet) {
-              throw Exception('Failed to authenticate with reset link');
-            }
-          }
-          
-          // Update the password
-          await authProvider.updatePassword(_passwordController.text.trim());
+          print('❌ No reset code and user not authenticated');
+          throw Exception('Invalid reset link or session expired');
+        }
+        
+        print('🎯 ResetPasswordScreen: Password update result: $success');
+        
+        if (!success) {
+          throw Exception(authProvider.errorMessage ?? 'Failed to update password');
         }
         
         setState(() {
@@ -110,7 +95,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         });
       } catch (e) {
         print('💥 ResetPasswordScreen: Error occurred: $e');
-        print('Error type: ${e.runtimeType}');
         
         setState(() {
           _isLoading = false;

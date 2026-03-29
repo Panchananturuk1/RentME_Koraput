@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'config/supabase_config.dart';
+import 'config/firebase_config.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -13,13 +13,15 @@ import 'providers/tent_provider.dart';
 import 'screens/camping/camping_booking_screen.dart';
 import 'providers/car_provider.dart';
 import 'screens/cars/car_booking_screen.dart';
+import 'providers/package_provider.dart';
+import 'screens/packages/package_booking_screen.dart';
 import 'screens/rides/ride_booking_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Supabase
-  await SupabaseConfig.initialize();
+  // Initialize Firebase
+  await FirebaseConfig.initialize();
   
   runApp(const MyApp());
 }
@@ -39,6 +41,7 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => AuthProvider()),
             ChangeNotifierProvider(create: (_) => TentProvider()),
             ChangeNotifierProvider(create: (_) => CarProvider()),
+            ChangeNotifierProvider(create: (_) => PackageProvider()),
           ],
           child: MaterialApp(
             title: 'RentMe Koraput',
@@ -96,12 +99,14 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(builder: (context) => const ForgotPasswordScreen());
                 case '/reset-password':
                   return MaterialPageRoute(builder: (context) => const ResetPasswordScreen());
-              case '/dashboard':
-                return MaterialPageRoute(builder: (context) => const DashboardScreen());
+              case '/cars':
+                  return MaterialPageRoute(builder: (context) => const CarBookingScreen());
+                case '/packages':
+                  return MaterialPageRoute(builder: (context) => const PackageBookingScreen());
+                case '/dashboard':
+                  return MaterialPageRoute(builder: (context) => const DashboardScreen());
               case '/camping':
                 return MaterialPageRoute(builder: (context) => const CampingBookingScreen());
-              case '/cars':
-                return MaterialPageRoute(builder: (context) => const CarBookingScreen());
               case '/ride':
                 return MaterialPageRoute(builder: (context) => const RideBookingScreen());
               default:
@@ -137,36 +142,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
       print('Query: ${Uri.base.query}');
       print('All query parameters: ${Uri.base.queryParameters}');
       
-      // Check if we're on web and have a password reset URL
-      // Check both fragment (for #access_token&refresh_token) and query (for ?code=)
+      // Check if we're on web and have a password reset URL (Firebase format)
       bool isPasswordReset = false;
-      String? refreshToken;
       String? code;
-      String? tokenHash;
       
-      // Check fragment for direct token-based reset
-      if (Uri.base.fragment.contains('refresh_token') && 
-          Uri.base.fragment.contains('type=recovery')) {
-        final fragment = Uri.base.fragment;
-        print('Password reset detected in fragment! Fragment: $fragment');
-        final params = Uri.splitQueryString(fragment);
-        refreshToken = params['refresh_token'];
-        tokenHash = params['token_hash'];
-        isPasswordReset = true;
-      }
-      
-      // Check query parameters for code-based reset
       final queryParams = Uri.base.queryParameters;
-      if (queryParams.containsKey('code')) {
-        code = queryParams['code'];
-        print('Password reset code detected in query! Code: $code');
+      
+      // Firebase standard password reset link format:
+      // ?mode=resetPassword&oobCode=...
+      if (queryParams['mode'] == 'resetPassword' && queryParams.containsKey('oobCode')) {
+        code = queryParams['oobCode'];
+        print('Firebase password reset detected! Code: $code');
         isPasswordReset = true;
       }
       
-      // Also check for token_hash in query parameters
-      if (queryParams.containsKey('token_hash')) {
-        tokenHash = queryParams['token_hash'];
-        print('Token hash detected in query! TokenHash: $tokenHash');
+      // Support for generic 'code' parameter just in case
+      if (!isPasswordReset && queryParams.containsKey('code')) {
+        code = queryParams['code'];
+        print('Generic reset code detected in query! Code: $code');
         isPasswordReset = true;
       }
       
@@ -176,9 +169,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => ResetPasswordScreen(
-              refreshToken: refreshToken,
               resetCode: code,
-              tokenHash: tokenHash,
             ),
           ),
         );
@@ -196,7 +187,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         // Navigate based on authentication status
-        if (authProvider.isLoggedIn) {
+        if (authProvider.isLoggedIn && authProvider.isEmailVerified) {
           return const DashboardScreen();
         } else {
           return const LoginScreen();

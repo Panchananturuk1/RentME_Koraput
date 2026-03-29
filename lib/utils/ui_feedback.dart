@@ -12,6 +12,16 @@ class UIFeedback {
     );
   }
 
+  static Future<void> showInfo(BuildContext context, String message) async {
+    await _showDialog(
+      context,
+      title: 'Info',
+      message: message,
+      icon: Icons.info_outline,
+      color: const Color(0xFF3B82F6),
+    );
+  }
+
   static Future<void> showError(BuildContext context, String message) async {
     await _showDialog(
       context,

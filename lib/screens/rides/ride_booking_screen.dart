@@ -133,6 +133,42 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     }
   }
 
+  Future<void> _useCurrentLocation() async {
+    setState(() => _loading = true);
+    try {
+      final pos = await _getCurrentPosition();
+      if (pos == null) {
+        if (mounted) UIFeedback.showError(context, 'Unable to fetch location. Check permissions.');
+        return;
+      }
+      
+      final latLng = LatLng(pos.latitude, pos.longitude);
+      final address = await _places.reverseGeocode(pos.latitude, pos.longitude);
+      
+      _applySelection(true, latLng, address ?? 'Current Location');
+      
+      // Clear suggestions and focus dropoff
+      _suggestionsVersion++;
+      setState(() => _suggestions = []);
+      if (mounted) FocusScope.of(context).requestFocus(_dropoffFocus);
+      
+    } catch (e) {
+      if (mounted) UIFeedback.showError(context, 'Error fetching location: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _useHomeLocation() {
+    // TODO: Fetch from user profile when available
+    UIFeedback.showInfo(context, 'Home address not set in profile.');
+  }
+
+  void _useWorkLocation() {
+    // TODO: Fetch from user profile when available
+    UIFeedback.showInfo(context, 'Work address not set in profile.');
+  }
+
   void _applySelection(bool forPickup, LatLng latLng, String address) {
     setState(() {
       if (forPickup) {
@@ -171,11 +207,19 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         }
         return;
       }
-      final bias = _pickupMarker?.position ?? _dropoffMarker?.position;
-      final results = await _places.autocomplete(query, location: bias);
-      // Ignore stale results from older queries
-      if (version == _suggestionsVersion) {
-        setState(() => _suggestions = results);
+      try {
+        final bias = _pickupMarker?.position ?? _dropoffMarker?.position;
+        final results = await _places.autocomplete(query, location: bias);
+        // Ignore stale results from older queries
+        if (version == _suggestionsVersion) {
+          setState(() => _suggestions = results);
+        }
+      } catch (e) {
+        debugPrint('Autocomplete error: $e');
+        // If error (e.g. billing issue), just clear suggestions to avoid stuck loading state
+        if (version == _suggestionsVersion) {
+          setState(() => _suggestions = []);
+        }
       }
     });
   }
@@ -642,17 +686,17 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 ActionChip(
                   label: const Text('Use current location'),
                   avatar: const Icon(Icons.near_me, size: 18),
-                  onPressed: () {},
+                  onPressed: _useCurrentLocation,
                 ),
                 ActionChip(
                   label: const Text('Home'),
                   avatar: const Icon(Icons.home_outlined, size: 18),
-                  onPressed: () {},
+                  onPressed: _useHomeLocation,
                 ),
                 ActionChip(
                   label: const Text('Work'),
                   avatar: const Icon(Icons.work_outline, size: 18),
-                  onPressed: () {},
+                  onPressed: _useWorkLocation,
                 ),
               ],
             ),
