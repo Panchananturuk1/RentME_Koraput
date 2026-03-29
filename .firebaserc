@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "rentme-koraput-be745"
-  }
+  },
+  "targets": {
+    "rentme-koraput-be745": {
+      "hosting": {
+        "rentme-mykoraput": [
+          "rentme-mykoraput"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
